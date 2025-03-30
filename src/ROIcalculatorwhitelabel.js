@@ -35,7 +35,18 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import EmailProjectionsFormTailwind from './EmailProjectionsFormTailwind';
-// import logo from './assets/ace-coatings-logo.png'; // Uncomment if using a local logo
+import stateWorkabilityData from './State based temps/state_workability_data_FINAL_FULL.json';
+// import logo from './assets/ace-coatings-logo.png'; // Uncomment if needed
+
+// 1) Global Keyframes for Pulse Animation
+const pulseKeyframes = `
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(33, 150, 243, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
+}
+`;
+const GlobalStyles = () => <style>{pulseKeyframes}</style>;
 
 /* ------------------ Chart.js Registration ------------------ */
 ChartJS.register(
@@ -76,7 +87,7 @@ const aceConfig = {
 
 const grossRevenuePerJob = 6250;
 const averageCostPerJob = 2400;
-const netRevenuePerJob = grossRevenuePerJob - averageCostPerJob; // 6250 - 2400 = 3850
+const netRevenuePerJob = grossRevenuePerJob - averageCostPerJob; // 3850
 const depositPerJob = grossRevenuePerJob * 0.5; // 3125
 const totalStartupCost = 15000;
 const FINAL_PAYMENT_DELAY = 42; // days
@@ -151,128 +162,192 @@ function roundToNearestHalf(num) {
 }
 
 export default function AceCoatingsROICalculator() {
-  // Inputs and state
-  const [zipCode, setZipCode] = useState('');
-  const [adSpendOption, setAdSpendOption] = useState('DoubleDown');
-  const [timeFrame, setTimeFrame] = useState(3); // Default 3 months
-  // We'll use crewAdditions array to store the day (number) each new crew is added.
+  return (
+    <>
+      <GlobalStyles />
+      <MainCalculator />
+    </>
+  );
+}
+
+function MainCalculator() {
+  // Basic Inputs / State – default: no state selected
+  const [selectedState, setSelectedState] = useState('');
+  const [adSpendOption, setAdSpendOption] = useState('PlayItSafe'); // Conservative default
+  const [timeFrame, setTimeFrame] = useState(6); // Default 6 months
+  // Base crew is always 1; additional crews stored as day numbers.
   const [crewAdditions, setCrewAdditions] = useState([]);
   const [showTargets, setShowTargets] = useState(true);
   const [toastMessage, setToastMessage] = useState('');
   const [openEmailForm, setOpenEmailForm] = useState(false);
   const [chartExpanded, setChartExpanded] = useState(false);
 
-  // Effective crew count on a given day is calculated per day, but here for UI display we assume current effective count is:
-  const effectiveCrewCount = Math.min(1 + crewAdditions.length, 4);
+  // Global month names array – declared once.
+  const monthNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  const currentMonthIndex = new Date().getMonth();
 
-  const baseDailyAdSpend = adSpendMapping[adSpendOption]?.daily || 0;
+  // If no state is selected, show the "SELECT STATE" message in the chart area.
+  let dayData = [];
+  let monthlyNetRevenueDisplay = '0';
+  let yearlyNetRevenueDisplay = '0';
+  let breakEvenDisplay = 'Not reached';
+  let bookingDots = [];
+  let monthlyMarkers = [];
+  let totalWorkableWeeks = 0;
+  if (selectedState) {
+    const stateData = stateWorkabilityData[selectedState];
+    const monthlyScoresRaw = stateData.monthly_scores;
+    totalWorkableWeeks = stateData.total_workable_weeks;
 
-  // ---- Partial Timeline Revenue Simulation ----
-  // We'll build the dayData array day-by-day, calculating crew count for each day.
-  const totalDays = timeFrame * 30;
-  let cumulative = 0;
-  const dayData = [];
-  for (let day = 1; day <= totalDays; day++) {
-    // Calculate the crew count for this day based on crewAdditions that have occurred on or before this day.
-    const currentCrewCount = Math.min(
-      1 + crewAdditions.filter((d) => d <= day).length,
-      4
-    );
-    // Daily capacity based on current crew count
-    const dailyCapacity =
-      (currentCrewCount * aceConfig.baseJobsPerWeek * 4.3) / 30;
-    // Daily ad spend is applied per crew (each crew gets its own ad spend)
-    const dailyAdSpend = baseDailyAdSpend * currentCrewCount;
-    // Daily appointments depend on daily ad spend
-    const dailyAppointments = (dailyAdSpend / 36) * 0.5;
-    const jobsDone = Math.min(dailyCapacity, dailyAppointments);
-    const depositRevenue = jobsDone * depositPerJob;
-    let finalPaymentRevenue = 0;
-    if (day > FINAL_PAYMENT_DELAY) {
-      finalPaymentRevenue = jobsDone * (netRevenuePerJob - depositPerJob);
-    }
-    let dailyProfit = depositRevenue + finalPaymentRevenue - dailyAdSpend - 20;
-    if (day === 1) {
-      dailyProfit -= totalStartupCost;
-    }
-    cumulative += dailyProfit;
-    dayData.push({ x: day / 30, y: cumulative });
-  }
-  // --------------------------------------------------
+    const effectiveCrewCount = Math.min(1 + crewAdditions.length, 4);
+    const baseDailyAdSpend = adSpendMapping[adSpendOption]?.daily || 0;
+    const totalDays = timeFrame * 30;
 
-  // Break-Even Calculation: First day where cumulative >= 0 (with interpolation)
-  let breakEvenDay = null;
-  for (let i = 0; i < dayData.length; i++) {
-    if (dayData[i].y >= 0) {
-      breakEvenDay = i + 1;
-      break;
+    let cumulative = 0;
+    dayData = [];
+    for (let day = 1; day <= totalDays; day++) {
+      const currentCrewCount = Math.min(
+        1 + crewAdditions.filter((d) => d <= day).length,
+        4
+      );
+      const rawMonthIndex = Math.floor((day - 1) / 30);
+      const monthIndex = (currentMonthIndex + rawMonthIndex) % 12;
+      const monthlyScore = monthlyScoresRaw[monthIndex];
+
+      const dailyCapacity =
+        (currentCrewCount * aceConfig.baseJobsPerWeek * 4.3) / 30;
+      const dailyAdSpend = baseDailyAdSpend * currentCrewCount;
+      const dailyAppointments = (dailyAdSpend / 36) * 0.5;
+      const jobsDone = Math.min(dailyCapacity, dailyAppointments);
+      const depositRevenue = jobsDone * depositPerJob;
+      let finalPaymentRevenue = 0;
+      if (day > FINAL_PAYMENT_DELAY) {
+        finalPaymentRevenue = jobsDone * (netRevenuePerJob - depositPerJob);
+      }
+      const variableRevenue =
+        (depositRevenue + finalPaymentRevenue) * monthlyScore;
+      const adjustedAdSpend = dailyAdSpend * monthlyScore;
+      let dailyProfit = variableRevenue - adjustedAdSpend - 20;
+      if (day === 1) {
+        dailyProfit -= totalStartupCost;
+      }
+      cumulative += dailyProfit;
+      dayData.push({ x: day / 30, y: cumulative });
     }
-  }
-  let breakEvenWeeks = 0;
-  if (breakEvenDay !== null) {
-    let exactBreakEvenDay = breakEvenDay;
-    if (breakEvenDay > 1) {
-      const prev = dayData[breakEvenDay - 2];
-      const current = dayData[breakEvenDay - 1];
-      if (current.y !== prev.y) {
-        const fraction = (0 - prev.y) / (current.y - prev.y);
-        exactBreakEvenDay = breakEvenDay - 1 + fraction;
+
+    // Break-Even Calculation
+    let breakEvenDay = null;
+    for (let i = 0; i < dayData.length; i++) {
+      if (dayData[i].y >= 0) {
+        breakEvenDay = i + 1;
+        break;
       }
     }
-    breakEvenWeeks = exactBreakEvenDay / 7;
-  }
-  const roundedBreakEven =
-    breakEvenDay !== null ? roundToNearestHalf(breakEvenWeeks) : 'Not reached';
-  const breakEvenDisplay =
-    breakEvenDay !== null ? `${roundedBreakEven} weeks` : 'Not reached';
+    if (breakEvenDay !== null) {
+      let exactBreakEvenDay = breakEvenDay;
+      if (breakEvenDay > 1) {
+        const prev = dayData[breakEvenDay - 2];
+        const current = dayData[breakEvenDay - 1];
+        if (current.y !== prev.y) {
+          const fraction = (0 - prev.y) / (current.y - prev.y);
+          exactBreakEvenDay = breakEvenDay - 1 + fraction;
+        }
+      }
+      const breakEvenWeeks = exactBreakEvenDay / 7;
+      const rounded = roundToNearestHalf(breakEvenWeeks);
+      breakEvenDisplay = `${rounded} weeks`;
+    }
 
-  // Booking Targets Logic:
-  // When no additional crew has been added, thresholds are [8, 10, 12] weeks.
-  // When one or more additional crews exist, thresholds are [4, 8, 10] weeks relative to the last crew addition.
-  const currentThresholds = crewAdditions.length > 0 ? [4, 8, 10] : [8, 10, 12];
-  function findThresholdDay(thresholdWeeks) {
-    const baseline = crewAdditions.length > 0 ? Math.max(...crewAdditions) : 0;
-    if (baseline > 0) {
-      return baseline + thresholdWeeks * 7;
-    } else {
-      // With no additional crew, effective crew count is 1.
-      const neededAppointments =
-        thresholdWeeks * (1 * aceConfig.baseJobsPerWeek);
-      if (baseDailyAdSpend <= 0) return totalDays;
-      const dailyAppointments = (baseDailyAdSpend / 36) * 0.5;
-      return neededAppointments / dailyAppointments;
+    // Monthly Markers
+    monthlyMarkers = dayData.filter((_, idx) => (idx + 1) % 30 === 0);
+
+    let monthlyNetRevenueLast30 = 0;
+    if (dayData.length > 30) {
+      const finalCumulative = dayData[dayData.length - 1].y;
+      const startCumulative = dayData[dayData.length - 31].y;
+      monthlyNetRevenueLast30 = finalCumulative - startCumulative;
+    } else if (dayData.length > 0) {
+      monthlyNetRevenueLast30 = dayData[dayData.length - 1].y;
+    }
+    monthlyNetRevenueDisplay = monthlyNetRevenueLast30.toLocaleString(
+      undefined,
+      { maximumFractionDigits: 0 }
+    );
+
+    // Yearly Revenue
+    let yearlyNetRevenue = 0;
+    if (timeFrame >= 12) {
+      const dayIndex = 12 * 30 - 1;
+      yearlyNetRevenue =
+        dayIndex < dayData.length
+          ? dayData[dayIndex].y
+          : dayData[dayData.length - 1].y;
+    } else if (dayData.length > 0) {
+      const finalVal = dayData[dayData.length - 1].y;
+      yearlyNetRevenue = (finalVal / timeFrame) * 12;
+    }
+    yearlyNetRevenueDisplay = yearlyNetRevenue.toLocaleString(undefined, {
+      maximumFractionDigits: 0,
+    });
+
+    // Booking Dots
+    const currentThresholds =
+      crewAdditions.length > 0 ? [4, 8, 10] : [8, 10, 12];
+    function findThresholdDay(thresholdWeeks) {
+      const baseline =
+        crewAdditions.length > 0 ? Math.max(...crewAdditions) : 0;
+      if (baseline > 0) {
+        return baseline + thresholdWeeks * 7;
+      } else {
+        const neededAppointments =
+          thresholdWeeks * (1 * aceConfig.baseJobsPerWeek);
+        if (baseDailyAdSpend <= 0) return totalDays;
+        const dailyAppointments = (baseDailyAdSpend / 36) * 0.5;
+        return neededAppointments / dailyAppointments;
+      }
+    }
+    if (showTargets) {
+      bookingDots = [];
+      currentThresholds.forEach((thr) => {
+        let thresholdDay = findThresholdDay(thr);
+        thresholdDay = Math.min(Math.max(thresholdDay, 1), totalDays);
+        const xPos = thresholdDay / 30;
+        const yPos = interpolateLine(dayData, xPos);
+        const label =
+          thr === currentThresholds[0]
+            ? 'All-In'
+            : thr === currentThresholds[1]
+            ? 'Double Down'
+            : 'Call';
+        const color =
+          thr === currentThresholds[0]
+            ? 'red'
+            : thr === currentThresholds[1]
+            ? 'yellow'
+            : 'green';
+        bookingDots.push({
+          x: xPos,
+          y: yPos,
+          customLabel: label,
+          color: color,
+          day: thresholdDay,
+        });
+      });
     }
   }
-  const bookingDots = [];
-  if (showTargets) {
-    currentThresholds.forEach((thr) => {
-      let thresholdDay = findThresholdDay(thr);
-      thresholdDay = Math.min(Math.max(thresholdDay, 1), totalDays);
-      const xPos = thresholdDay / 30;
-      const yPos = interpolateLine(dayData, xPos);
-      const label =
-        thr === currentThresholds[0]
-          ? 'All-In'
-          : thr === currentThresholds[1]
-          ? 'Double Down'
-          : 'Call';
-      const color =
-        thr === currentThresholds[0]
-          ? 'red'
-          : thr === currentThresholds[1]
-          ? 'yellow'
-          : 'green';
-      bookingDots.push({
-        x: xPos,
-        y: yPos,
-        customLabel: label,
-        color: color,
-        day: thresholdDay,
-      });
-    });
-  }
-
-  const monthlyMarkers = dayData.filter((_, idx) => (idx + 1) % 30 === 0);
 
   // Chart Data & Options
   const lineDataset = {
@@ -320,8 +395,6 @@ export default function AceCoatingsROICalculator() {
   const chartData = {
     datasets: [lineDataset, monthlyMarkerDataset, bookingTargetDataset],
   };
-
-  // Disable tooltip for the revenue line
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -331,14 +404,17 @@ export default function AceCoatingsROICalculator() {
           tooltipItem.dataset.label !== 'Cumulative Revenue ($)',
         callbacks: {
           label: (ctx) => {
-            const val = ctx.parsed.y.toLocaleString(undefined, {
-              maximumFractionDigits: 0,
-            });
+            const val =
+              ctx.parsed.y?.toLocaleString(undefined, {
+                maximumFractionDigits: 0,
+              }) || '0';
             if (ctx.dataset.label === 'Booking Targets') {
               return `Click to add crew → $${val}`;
             }
             if (ctx.dataset.label === 'Monthly Markers') {
-              return `Month ${ctx.parsed.x.toFixed(1)}: $${val}`;
+              const offset = Math.round(ctx.parsed.x);
+              const cycIndex = (currentMonthIndex + offset) % 12;
+              return `Month ${monthNames[cycIndex]}: $${val}`;
             }
             return `$${val}`;
           },
@@ -352,7 +428,15 @@ export default function AceCoatingsROICalculator() {
         min: 0,
         max: timeFrame,
         title: { display: true, text: 'Months' },
-        ticks: { color: '#0D47A1', stepSize: 1 },
+        ticks: {
+          stepSize: 1,
+          color: '#0D47A1',
+          callback: function (value) {
+            const offset = Math.round(value);
+            const cycIndex = (currentMonthIndex + offset) % 12;
+            return monthNames[cycIndex];
+          },
+        },
       },
       y: {
         title: { display: true, text: 'Cumulative Revenue ($)' },
@@ -371,7 +455,6 @@ export default function AceCoatingsROICalculator() {
           const idx = element.index;
           const targetDot = bookingDots[idx];
           if (targetDot) {
-            // Immediately add a crew at the clicked dot's day.
             handleAddCrewFromBookingTarget(targetDot.day);
           }
         }
@@ -379,36 +462,6 @@ export default function AceCoatingsROICalculator() {
     },
   };
 
-  let monthlyNetRevenueLast30 = 0;
-  if (dayData.length > 30) {
-    const finalCumulative = dayData[dayData.length - 1].y;
-    const startCumulative = dayData[dayData.length - 31].y;
-    monthlyNetRevenueLast30 = finalCumulative - startCumulative;
-  } else {
-    monthlyNetRevenueLast30 = dayData.length
-      ? dayData[dayData.length - 1].y
-      : 0;
-  }
-  const monthlyNetRevenueDisplay = monthlyNetRevenueLast30.toLocaleString(
-    undefined,
-    { maximumFractionDigits: 0 }
-  );
-  let yearlyNetRevenue = 0;
-  if (timeFrame >= 12) {
-    const dayIndex = 12 * 30 - 1;
-    yearlyNetRevenue =
-      dayIndex < dayData.length
-        ? dayData[dayIndex].y
-        : dayData[dayData.length - 1].y;
-  } else {
-    const finalVal = dayData[dayData.length - 1]?.y || 0;
-    yearlyNetRevenue = (finalVal / timeFrame) * 12;
-  }
-  const yearlyNetRevenueDisplay = yearlyNetRevenue.toLocaleString(undefined, {
-    maximumFractionDigits: 0,
-  });
-
-  // Chart expansion functions
   function handleExpandChart() {
     setChartExpanded(true);
   }
@@ -416,17 +469,15 @@ export default function AceCoatingsROICalculator() {
     setChartExpanded(false);
   }
   function handleResetChart() {
-    setZipCode('');
-    setCrewAdditions([]); // resets effective crew count to 1
     setAdSpendOption('PlayItSafe');
-    setTimeFrame(3);
+    setTimeFrame(6);
+    setCrewAdditions([]);
     setShowTargets(true);
     setToastMessage('Chart reset to default conservative settings.');
     setTimeout(() => setToastMessage(''), 3000);
   }
-
-  // Crew addition from booking dot
   function handleAddCrewFromBookingTarget(eventDay) {
+    const effectiveCrewCount = Math.min(1 + crewAdditions.length, 4);
     if (effectiveCrewCount < 4) {
       setCrewAdditions([...crewAdditions, eventDay]);
       setToastMessage(
@@ -454,7 +505,7 @@ export default function AceCoatingsROICalculator() {
       >
         <Paper sx={{ p: { xs: 2, md: 4 }, borderRadius: 2, boxShadow: 3 }}>
           <Grid container spacing={3}>
-            {/* LEFT PANEL */}
+            {/* LEFT PANEL: Inputs */}
             <Grid
               item
               xs={12}
@@ -477,31 +528,38 @@ export default function AceCoatingsROICalculator() {
                 >
                   Ace Coatings ROI Calculator
                 </Typography>
-                {/* Zip Code Input with info tag */}
+                {/* State Dropdown (pulses if not selected) */}
                 <Typography
                   variant='subtitle2'
                   sx={{ mb: 1, fontWeight: 'bold', color: '#424242' }}
                 >
-                  Zip Code
+                  State
                 </Typography>
-                <TextField
+                <FormControl
                   variant='outlined'
-                  size='small'
                   fullWidth
-                  type='number'
-                  value={zipCode}
-                  onChange={(e) => setZipCode(e.target.value)}
-                  sx={{ mb: 1 }}
-                />
-                <Typography
-                  variant='caption'
-                  sx={{ display: 'block', color: '#757575', mb: 2 }}
+                  size='small'
+                  sx={{
+                    mb: 2,
+                    animation:
+                      selectedState === '' ? 'pulse 1s infinite' : 'none',
+                  }}
                 >
-                  Enter your zip code to get a projection based on your workable
-                  months. Outdoor temperature is crucial for product setting.
-                </Typography>
-
-                {/* Daily Ad Spend Input with info tag */}
+                  <Select
+                    value={selectedState}
+                    onChange={(e) => setSelectedState(e.target.value)}
+                  >
+                    <MenuItem value=''>
+                      <em>Select State</em>
+                    </MenuItem>
+                    {Object.keys(stateWorkabilityData).map((state) => (
+                      <MenuItem key={state} value={state}>
+                        {state}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                {/* Daily Ad Spend */}
                 <Typography
                   variant='subtitle2'
                   sx={{ mb: 1, fontWeight: 'bold', color: '#424242' }}
@@ -537,8 +595,7 @@ export default function AceCoatingsROICalculator() {
                   spend on ads, the more likely leads you will have to close and
                   book.
                 </Typography>
-
-                {/* Time Frame Input with plus/minus */}
+                {/* Time Frame */}
                 <Typography
                   variant='subtitle2'
                   sx={{ mb: 1, fontWeight: 'bold', color: '#424242' }}
@@ -579,8 +636,7 @@ export default function AceCoatingsROICalculator() {
                     –
                   </Button>
                 </Box>
-
-                {/* Crew Count with plus/minus using booking dot logic */}
+                {/* Crew Count */}
                 <Typography
                   variant='subtitle2'
                   sx={{ mb: 1, fontWeight: 'bold', color: '#424242' }}
@@ -603,7 +659,6 @@ export default function AceCoatingsROICalculator() {
                     sx={{ ml: 1 }}
                     onClick={() => {
                       if (bookingDots.length > 0) {
-                        // Add a crew at the conservative booking dot (first dot)
                         handleAddCrewFromBookingTarget(bookingDots[0].day);
                       }
                     }}
@@ -635,8 +690,7 @@ export default function AceCoatingsROICalculator() {
                     –
                   </Button>
                 </Box>
-
-                {/* Hide Booking Targets Button */}
+                {/* Hide Booking Targets */}
                 <Button
                   variant='outlined'
                   fullWidth
@@ -676,9 +730,8 @@ export default function AceCoatingsROICalculator() {
               </Box>
             </Grid>
 
-            {/* RIGHT PANEL */}
+            {/* RIGHT PANEL: Revenue & Chart */}
             <Grid item xs={12} md={8}>
-              {/* Revenue Headers – responsive wrapping to keep in view */}
               <Box
                 sx={{
                   display: 'flex',
@@ -715,18 +768,34 @@ export default function AceCoatingsROICalculator() {
                 </Box>
               </Box>
 
-              {/* Chart */}
-              <Box
-                sx={{
-                  width: '100%',
-                  height: { xs: 300, md: 400 },
-                  position: 'relative',
-                }}
-              >
-                <Chart type='line' data={chartData} options={chartOptions} />
-              </Box>
+              {/** Chart Area: If no state selected, show "SELECT STATE" message */}
+              {!selectedState ? (
+                <Box
+                  sx={{
+                    width: '100%',
+                    height: { xs: 300, md: 400 },
+                    border: '1px solid #ccc',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Typography variant='h4' color='error'>
+                    SELECT STATE
+                  </Typography>
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    width: '100%',
+                    height: { xs: 300, md: 400 },
+                    position: 'relative',
+                  }}
+                >
+                  <Chart type='line' data={chartData} options={chartOptions} />
+                </Box>
+              )}
 
-              {/* Buttons Under Chart */}
               <Box
                 sx={{
                   mt: 2,
@@ -754,10 +823,10 @@ export default function AceCoatingsROICalculator() {
             </Grid>
           </Grid>
 
-          {/* LOWER UI ROW: ROI Break Even & Per Job Stats */}
+          {/* LOWER UI ROW: ROI Break Even, Per Job Stats & Workable Weeks */}
           <Box sx={{ mt: 4 }}>
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={4}>
                 <Box
                   sx={{
                     border: '1px solid #e0e0e0',
@@ -772,17 +841,9 @@ export default function AceCoatingsROICalculator() {
                   <Typography variant='h4' sx={{ fontWeight: 400 }}>
                     {breakEvenDisplay}
                   </Typography>
-                  <Typography
-                    variant='caption'
-                    sx={{ display: 'block', color: '#757575', mt: 1 }}
-                  >
-                    The break even point considers the one time license fee and
-                    initial equipment costs. Jump on a call to get a pricing
-                    breakdown based on your area.
-                  </Typography>
                 </Box>
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={4}>
                 <Box
                   sx={{
                     border: '1px solid #e0e0e0',
@@ -812,10 +873,30 @@ export default function AceCoatingsROICalculator() {
                   </Typography>
                 </Box>
               </Grid>
+              <Grid item xs={12} md={4}>
+                <Box
+                  sx={{
+                    border: '1px solid #e0e0e0',
+                    borderRadius: 2,
+                    p: 2,
+                    textAlign: 'center',
+                  }}
+                >
+                  <Typography variant='h5' sx={{ fontWeight: 'bold', mb: 1 }}>
+                    Workable Weeks
+                  </Typography>
+                  <Typography variant='h4' sx={{ fontWeight: 400 }}>
+                    {selectedState
+                      ? stateWorkabilityData[selectedState].total_workable_weeks
+                      : 0}{' '}
+                    weeks
+                  </Typography>
+                </Box>
+              </Grid>
             </Grid>
           </Box>
 
-          {/* "How We Calculate Revenue" Accordion with thicker border */}
+          {/* "How We Calculate Revenue" Accordion */}
           <Box
             sx={{ border: '2px solid #0D47A1', borderRadius: 2, mt: 4, p: 1 }}
           >
@@ -906,7 +987,7 @@ export default function AceCoatingsROICalculator() {
           onClose={() => setOpenEmailForm(false)}
           projectionsHtml={`
             <h1>Your ROI Projections</h1>
-            <p><strong>Zip Code:</strong> ${zipCode}</p>
+            <p><strong>State:</strong> ${selectedState}</p>
             <p><strong>Ad Spend:</strong> ${
               adSpendMapping[adSpendOption]?.label
             }</p>
@@ -921,7 +1002,14 @@ export default function AceCoatingsROICalculator() {
             <p><strong>Gross Revenue per Job:</strong> $${grossRevenuePerJob.toFixed(
               2
             )}</p>
-            <p><strong>Daily Ad Spend Setting:</strong> $${baseDailyAdSpend} per crew</p>
+            <p><strong>Daily Ad Spend Setting:</strong> $${
+              adSpendMapping[adSpendOption]?.daily
+            } per crew</p>
+            <p><strong>Total Workable Weeks:</strong> ${
+              selectedState
+                ? stateWorkabilityData[selectedState].total_workable_weeks
+                : 0
+            } weeks</p>
             <p><strong>Disclaimer:</strong> The results shown are estimates only and do not guarantee future revenue. Actual results may vary.</p>
           `}
           onSuccess={(bookAppointment) => {

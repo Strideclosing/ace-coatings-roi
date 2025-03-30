@@ -1,0 +1,606 @@
+State,Month,Avg High (°F),Avg Low (°F)
+Alabama,Jan,54.2,33.6
+Alabama,Feb,58.3,36.5
+Alabama,Mar,66.3,43.6
+Alabama,Apr,74.5,51.2
+Alabama,May,81.3,60.2
+Alabama,Jun,87.8,68.8
+Alabama,Jul,90.6,72.5
+Alabama,Aug,90.2,72.1
+Alabama,Sep,86,66.5
+Alabama,Oct,76.1,54.3
+Alabama,Nov,65.3,44
+Alabama,Dec,56.1,36.8
+Utah,Jan,38.2,20.1
+Utah,Feb,43.5,25.2
+Utah,Mar,52.4,32.9
+Utah,Apr,61.3,40.7
+Utah,May,72.4,50.1
+Utah,Jun,84.6,59.3
+Utah,Jul,92.8,66.5
+Utah,Aug,90.3,64.2
+Utah,Sep,79.6,54.6
+Utah,Oct,64.2,42
+Utah,Nov,49.3,30.8
+Utah,Dec,39.1,22.4
+Arizona,Jan,67.3,44.8
+Arizona,Feb,71.8,47.9
+Arizona,Mar,78.5,52.3
+Arizona,Apr,86.2,58.9
+Arizona,May,95.1,67.4
+Arizona,Jun,104,76.2
+Arizona,Jul,106.7,82.1
+Arizona,Aug,104.9,81.5
+Arizona,Sep,98.4,73.8
+Arizona,Oct,86,61.2
+Arizona,Nov,73.9,50
+Arizona,Dec,66.5,44.2
+Alaska,Jan,16.3,2.8
+Alaska,Feb,20.5,5.9
+Alaska,Mar,30.2,14
+Alaska,Apr,41.8,28.2
+Alaska,May,53.3,38.1
+Alaska,Jun,62.1,46.7
+Alaska,Jul,65.4,50.2
+Alaska,Aug,62.3,47.6
+Alaska,Sep,52,39.5
+Alaska,Oct,37.7,27.3
+Alaska,Nov,24.9,14.9
+Alaska,Dec,18.1,5.7
+California,Jan,58.6,41
+California,Feb,62.1,44.5
+California,Mar,65.3,47.3
+California,Apr,69.1,50.6
+California,May,74.5,55.4
+California,Jun,80.1,60.2
+California,Jul,85.4,64.1
+California,Aug,86,64.5
+California,Sep,82.3,61.2
+California,Oct,74.6,53
+California,Nov,64.2,45.2
+California,Dec,57.1,40
+,,,
+Arkansas,Jan,50,31
+Arkansas,Feb,55,35
+Arkansas,Mar,65,43
+Arkansas,Apr,74,52
+Arkansas,May,81,60
+Arkansas,Jun,88,68
+Arkansas,Jul,92,71
+Arkansas,Aug,91,70
+Arkansas,Sep,85,63
+Arkansas,Oct,74,51
+Arkansas,Nov,62,40
+Arkansas,Dec,52,33
+Colorado,Jan,45,20
+Colorado,Feb,47,25
+Colorado,Mar,55,32
+Colorado,Apr,62,40
+Colorado,May,72,50
+Colorado,Jun,82,58
+Colorado,Jul,88,63
+Colorado,Aug,86,61
+Colorado,Sep,77,52
+Colorado,Oct,64,40
+Colorado,Nov,52,28
+Colorado,Dec,44,21
+Connecticut,Jan,37,20
+Connecticut,Feb,39,23
+Connecticut,Mar,47,32
+Connecticut,Apr,58,41
+Connecticut,May,68,50
+Connecticut,Jun,77,59
+Connecticut,Jul,82,63
+Connecticut,Aug,80,61
+Connecticut,Sep,73,53
+Connecticut,Oct,62,42
+Connecticut,Nov,52,33
+Connecticut,Dec,41,24
+Delaware,Jan,44,28
+Delaware,Feb,46,30
+Delaware,Mar,54,38
+Delaware,Apr,65,47
+Delaware,May,75,58
+Delaware,Jun,84,66
+Delaware,Jul,87,70
+Delaware,Aug,85,68
+Delaware,Sep,79,60
+Delaware,Oct,68,49
+Delaware,Nov,58,39
+Delaware,Dec,48,31
+Florida,Jan,68,49
+Florida,Feb,70,51
+Florida,Mar,75,56
+Florida,Apr,80,61
+Florida,May,85,67
+Florida,Jun,89,73
+Florida,Jul,91,75
+Florida,Aug,91,75
+Florida,Sep,88,72
+Florida,Oct,83,65
+Florida,Nov,76,56
+Florida,Dec,70,51
+Georgia,Jan,52,33
+Georgia,Feb,56,36
+Georgia,Mar,64,44
+Georgia,Apr,72,52
+Georgia,May,79,61
+Georgia,Jun,86,68
+Georgia,Jul,89,71
+Georgia,Aug,88,70
+Georgia,Sep,82,64
+Georgia,Oct,73,53
+Georgia,Nov,63,43
+Georgia,Dec,54,36
+Hawaii,Jan,80,66
+Hawaii,Feb,80,66
+Hawaii,Mar,81,67
+Hawaii,Apr,82,68
+Hawaii,May,83,70
+Hawaii,Jun,85,72
+Hawaii,Jul,86,74
+Hawaii,Aug,87,75
+Hawaii,Sep,87,74
+Hawaii,Oct,86,72
+Hawaii,Nov,84,70
+Hawaii,Dec,81,67
+Idaho,Jan,31,14
+Idaho,Feb,37,18
+Idaho,Mar,47,28
+Idaho,Apr,58,37
+Idaho,May,67,45
+Idaho,Jun,75,52
+Idaho,Jul,85,57
+Idaho,Aug,84,56
+Idaho,Sep,73,47
+Idaho,Oct,60,36
+Idaho,Nov,44,25
+Idaho,Dec,33,17
+Illinois,Jan,31,16
+Illinois,Feb,36,21
+Illinois,Mar,48,33
+Illinois,Apr,60,44
+Illinois,May,71,55
+Illinois,Jun,81,65
+Illinois,Jul,85,69
+Illinois,Aug,83,67
+Illinois,Sep,77,59
+Illinois,Oct,65,47
+Illinois,Nov,50,35
+Illinois,Dec,37,23
+Indiana,Jan,35,20
+Indiana,Feb,39,24
+Indiana,Mar,50,34
+Indiana,Apr,62,45
+Indiana,May,72,55
+Indiana,Jun,82,64
+Indiana,Jul,85,68
+Indiana,Aug,84,67
+Indiana,Sep,77,58
+Indiana,Oct,66,46
+Indiana,Nov,52,34
+Indiana,Dec,39,23
+,,,
+Iowa,Jan,28,12
+Iowa,Feb,34,18
+Iowa,Mar,47,30
+Iowa,Apr,60,42
+Iowa,May,71,52
+Iowa,Jun,81,62
+Iowa,Jul,85,66
+Iowa,Aug,83,64
+Iowa,Sep,76,55
+Iowa,Oct,63,42
+Iowa,Nov,47,28
+Iowa,Dec,33,17
+Kansas,Jan,40,20
+Kansas,Feb,45,25
+Kansas,Mar,56,37
+Kansas,Apr,67,48
+Kansas,May,76,58
+Kansas,Jun,86,66
+Kansas,Jul,92,70
+Kansas,Aug,90,69
+Kansas,Sep,82,60
+Kansas,Oct,70,46
+Kansas,Nov,56,33
+Kansas,Dec,43,22
+Kentucky,Jan,40,25
+Kentucky,Feb,45,28
+Kentucky,Mar,56,38
+Kentucky,Apr,67,48
+Kentucky,May,76,58
+Kentucky,Jun,85,66
+Kentucky,Jul,89,70
+Kentucky,Aug,87,69
+Kentucky,Sep,80,60
+Kentucky,Oct,68,48
+Kentucky,Nov,54,36
+Kentucky,Dec,43,28
+Louisiana,Jan,58,39
+Louisiana,Feb,62,42
+Louisiana,Mar,70,50
+Louisiana,Apr,78,59
+Louisiana,May,85,68
+Louisiana,Jun,90,74
+Louisiana,Jul,92,75
+Louisiana,Aug,92,75
+Louisiana,Sep,88,70
+Louisiana,Oct,80,60
+Louisiana,Nov,70,49
+Louisiana,Dec,61,41
+Maine,Jan,25,6
+Maine,Feb,29,10
+Maine,Mar,39,22
+Maine,Apr,52,35
+Maine,May,64,45
+Maine,Jun,73,54
+Maine,Jul,78,58
+Maine,Aug,76,57
+Maine,Sep,68,48
+Maine,Oct,55,36
+Maine,Nov,43,25
+Maine,Dec,30,12
+Maryland,Jan,42,27
+Maryland,Feb,46,30
+Maryland,Mar,55,38
+Maryland,Apr,66,48
+Maryland,May,75,58
+Maryland,Jun,84,66
+Maryland,Jul,88,70
+Maryland,Aug,86,69
+Maryland,Sep,80,61
+Maryland,Oct,69,49
+Maryland,Nov,57,38
+Maryland,Dec,46,30
+Massachusetts,Jan,36,19
+Massachusetts,Feb,39,22
+Massachusetts,Mar,47,30
+Massachusetts,Apr,59,41
+Massachusetts,May,69,51
+Massachusetts,Jun,78,60
+Massachusetts,Jul,83,64
+Massachusetts,Aug,81,63
+Massachusetts,Sep,73,54
+Massachusetts,Oct,61,43
+Massachusetts,Nov,49,32
+Massachusetts,Dec,38,23
+Michigan,Jan,30,15
+Michigan,Feb,34,18
+Michigan,Mar,44,28
+Michigan,Apr,56,39
+Michigan,May,67,49
+Michigan,Jun,76,58
+Michigan,Jul,81,62
+Michigan,Aug,79,61
+Michigan,Sep,71,52
+Michigan,Oct,58,40
+Michigan,Nov,44,28
+Michigan,Dec,32,18
+Minnesota,Jan,24,4
+Minnesota,Feb,28,8
+Minnesota,Mar,40,21
+Minnesota,Apr,55,35
+Minnesota,May,67,45
+Minnesota,Jun,76,54
+Minnesota,Jul,81,58
+Minnesota,Aug,79,57
+Minnesota,Sep,70,48
+Minnesota,Oct,55,35
+Minnesota,Nov,38,22
+Minnesota,Dec,26,9
+Mississippi,Jan,56,36
+Mississippi,Feb,60,39
+Mississippi,Mar,68,47
+Mississippi,Apr,76,56
+Mississippi,May,84,65
+Mississippi,Jun,90,72
+Mississippi,Jul,92,74
+Mississippi,Aug,92,74
+Mississippi,Sep,88,68
+Mississippi,Oct,78,56
+Mississippi,Nov,66,44
+Mississippi,Dec,57,37
+,,,
+Missouri,Jan,38,22
+Missouri,Feb,43,26
+Missouri,Mar,55,36
+Missouri,Apr,67,47
+Missouri,May,76,57
+Missouri,Jun,85,65
+Missouri,Jul,89,69
+Missouri,Aug,88,68
+Missouri,Sep,81,60
+Missouri,Oct,69,47
+Missouri,Nov,54,35
+Missouri,Dec,42,25
+Montana,Jan,26,6
+Montana,Feb,32,10
+Montana,Mar,43,23
+Montana,Apr,55,34
+Montana,May,65,43
+Montana,Jun,73,50
+Montana,Jul,83,55
+Montana,Aug,81,54
+Montana,Sep,70,44
+Montana,Oct,56,32
+Montana,Nov,39,20
+Montana,Dec,28,10
+Nebraska,Jan,33,14
+Nebraska,Feb,39,19
+Nebraska,Mar,51,30
+Nebraska,Apr,63,41
+Nebraska,May,73,52
+Nebraska,Jun,83,61
+Nebraska,Jul,88,66
+Nebraska,Aug,86,65
+Nebraska,Sep,78,55
+Nebraska,Oct,64,41
+Nebraska,Nov,48,28
+Nebraska,Dec,36,17
+Nevada,Jan,45,25
+Nevada,Feb,52,30
+Nevada,Mar,61,37
+Nevada,Apr,71,45
+Nevada,May,82,55
+Nevada,Jun,91,64
+Nevada,Jul,98,70
+Nevada,Aug,96,69
+Nevada,Sep,87,59
+Nevada,Oct,72,46
+Nevada,Nov,58,33
+Nevada,Dec,47,26
+New Hampshire,Jan,29,10
+New Hampshire,Feb,34,14
+New Hampshire,Mar,44,25
+New Hampshire,Apr,57,36
+New Hampshire,May,68,47
+New Hampshire,Jun,76,55
+New Hampshire,Jul,81,59
+New Hampshire,Aug,79,58
+New Hampshire,Sep,70,49
+New Hampshire,Oct,56,37
+New Hampshire,Nov,43,27
+New Hampshire,Dec,32,16
+New Jersey,Jan,39,24
+New Jersey,Feb,43,27
+New Jersey,Mar,52,35
+New Jersey,Apr,63,45
+New Jersey,May,73,55
+New Jersey,Jun,82,64
+New Jersey,Jul,86,68
+New Jersey,Aug,84,67
+New Jersey,Sep,77,59
+New Jersey,Oct,65,47
+New Jersey,Nov,53,36
+New Jersey,Dec,42,28
+New Mexico,Jan,46,24
+New Mexico,Feb,52,28
+New Mexico,Mar,60,35
+New Mexico,Apr,69,44
+New Mexico,May,78,54
+New Mexico,Jun,88,62
+New Mexico,Jul,92,66
+New Mexico,Aug,90,65
+New Mexico,Sep,83,56
+New Mexico,Oct,70,43
+New Mexico,Nov,58,32
+New Mexico,Dec,47,25
+New York,Jan,31,16
+New York,Feb,35,20
+New York,Mar,45,30
+New York,Apr,58,41
+New York,May,69,51
+New York,Jun,78,60
+New York,Jul,83,64
+New York,Aug,81,63
+New York,Sep,73,54
+New York,Oct,60,42
+New York,Nov,47,31
+New York,Dec,35,21
+North Carolina,Jan,49,31
+North Carolina,Feb,53,34
+North Carolina,Mar,62,42
+North Carolina,Apr,72,52
+North Carolina,May,79,61
+North Carolina,Jun,86,68
+North Carolina,Jul,89,72
+North Carolina,Aug,88,71
+North Carolina,Sep,82,64
+North Carolina,Oct,72,53
+North Carolina,Nov,60,42
+North Carolina,Dec,51,34
+North Dakota,Jan,20,2
+North Dakota,Feb,25,6
+North Dakota,Mar,37,18
+North Dakota,Apr,51,32
+North Dakota,May,64,44
+North Dakota,Jun,73,53
+North Dakota,Jul,80,58
+North Dakota,Aug,78,57
+North Dakota,Sep,68,47
+North Dakota,Oct,52,33
+North Dakota,Nov,34,19
+North Dakota,Dec,23,7
+,,,
+Ohio,Jan,34,20
+Ohio,Feb,38,23
+Ohio,Mar,49,33
+Ohio,Apr,61,44
+Ohio,May,71,54
+Ohio,Jun,80,63
+Ohio,Jul,84,66
+Ohio,Aug,82,65
+Ohio,Sep,75,56
+Ohio,Oct,63,44
+Ohio,Nov,49,33
+Ohio,Dec,37,23
+Oklahoma,Jan,47,28
+Oklahoma,Feb,53,33
+Oklahoma,Mar,63,42
+Oklahoma,Apr,72,52
+Oklahoma,May,80,61
+Oklahoma,Jun,89,69
+Oklahoma,Jul,94,73
+Oklahoma,Aug,93,72
+Oklahoma,Sep,85,63
+Oklahoma,Oct,72,50
+Oklahoma,Nov,60,39
+Oklahoma,Dec,50,30
+Oregon,Jan,45,33
+Oregon,Feb,50,35
+Oregon,Mar,56,38
+Oregon,Apr,62,43
+Oregon,May,70,49
+Oregon,Jun,77,55
+Oregon,Jul,83,59
+Oregon,Aug,82,59
+Oregon,Sep,76,53
+Oregon,Oct,64,44
+Oregon,Nov,52,37
+Oregon,Dec,45,34
+Pennsylvania,Jan,35,20
+Pennsylvania,Feb,39,24
+Pennsylvania,Mar,49,33
+Pennsylvania,Apr,61,44
+Pennsylvania,May,71,55
+Pennsylvania,Jun,80,63
+Pennsylvania,Jul,84,67
+Pennsylvania,Aug,82,66
+Pennsylvania,Sep,75,58
+Pennsylvania,Oct,63,45
+Pennsylvania,Nov,49,33
+Pennsylvania,Dec,37,24
+Rhode Island,Jan,38,23
+Rhode Island,Feb,41,25
+Rhode Island,Mar,49,34
+Rhode Island,Apr,60,44
+Rhode Island,May,70,54
+Rhode Island,Jun,78,62
+Rhode Island,Jul,83,66
+Rhode Island,Aug,81,65
+Rhode Island,Sep,74,56
+Rhode Island,Oct,62,44
+Rhode Island,Nov,50,34
+Rhode Island,Dec,40,25
+South Carolina,Jan,56,37
+South Carolina,Feb,61,40
+South Carolina,Mar,68,47
+South Carolina,Apr,76,56
+South Carolina,May,83,64
+South Carolina,Jun,89,71
+South Carolina,Jul,92,74
+South Carolina,Aug,91,73
+South Carolina,Sep,86,66
+South Carolina,Oct,76,54
+South Carolina,Nov,66,43
+South Carolina,Dec,57,38
+South Dakota,Jan,25,5
+South Dakota,Feb,32,12
+South Dakota,Mar,45,25
+South Dakota,Apr,58,38
+South Dakota,May,69,49
+South Dakota,Jun,79,58
+South Dakota,Jul,85,62
+South Dakota,Aug,84,60
+South Dakota,Sep,74,50
+South Dakota,Oct,60,37
+South Dakota,Nov,42,22
+South Dakota,Dec,28,10
+Tennessee,Jan,46,29
+Tennessee,Feb,51,33
+Tennessee,Mar,61,42
+Tennessee,Apr,71,52
+Tennessee,May,79,61
+Tennessee,Jun,87,69
+Tennessee,Jul,90,72
+Tennessee,Aug,89,71
+Tennessee,Sep,83,63
+Tennessee,Oct,72,51
+Tennessee,Nov,59,40
+Tennessee,Dec,48,32
+Texas,Jan,55,36
+Texas,Feb,61,41
+Texas,Mar,71,50
+Texas,Apr,79,59
+Texas,May,86,67
+Texas,Jun,93,73
+Texas,Jul,97,76
+Texas,Aug,97,75
+Texas,Sep,90,68
+Texas,Oct,78,56
+Texas,Nov,66,45
+Texas,Dec,57,38
+Utah,Jan,38,20
+Utah,Feb,43,25
+Utah,Mar,52,33
+Utah,Apr,61,41
+Utah,May,72,50
+Utah,Jun,85,59
+Utah,Jul,93,66
+Utah,Aug,90,64
+Utah,Sep,80,55
+Utah,Oct,64,42
+Utah,Nov,49,31
+Utah,Dec,39,22
+,,,
+Vermont,Jan,26,7
+Vermont,Feb,30,10
+Vermont,Mar,40,22
+Vermont,Apr,54,35
+Vermont,May,66,45
+Vermont,Jun,75,54
+Vermont,Jul,79,58
+Vermont,Aug,77,57
+Vermont,Sep,68,48
+Vermont,Oct,54,36
+Vermont,Nov,41,25
+Vermont,Dec,30,13
+Virginia,Jan,45,28
+Virginia,Feb,50,32
+Virginia,Mar,59,40
+Virginia,Apr,70,50
+Virginia,May,78,60
+Virginia,Jun,86,68
+Virginia,Jul,89,71
+Virginia,Aug,88,70
+Virginia,Sep,82,63
+Virginia,Oct,70,50
+Virginia,Nov,58,38
+Virginia,Dec,47,30
+Washington,Jan,42,32
+Washington,Feb,47,34
+Washington,Mar,54,37
+Washington,Apr,60,42
+Washington,May,68,49
+Washington,Jun,74,55
+Washington,Jul,80,59
+Washington,Aug,79,59
+Washington,Sep,72,52
+Washington,Oct,60,44
+Washington,Nov,48,36
+Washington,Dec,42,33
+West Virginia,Jan,37,21
+West Virginia,Feb,42,25
+West Virginia,Mar,52,33
+West Virginia,Apr,63,44
+West Virginia,May,72,54
+West Virginia,Jun,80,62
+West Virginia,Jul,84,66
+West Virginia,Aug,83,65
+West Virginia,Sep,76,57
+West Virginia,Oct,65,45
+West Virginia,Nov,51,34
+West Virginia,Dec,40,25
+Wisconsin,Jan,24,6
+Wisconsin,Feb,29,10
+Wisconsin,Mar,42,24
+Wisconsin,Apr,56,37
+Wisconsin,May,68,48
+Wisconsin,Jun,77,56
+Wisconsin,Jul,82,61
+Wisconsin,Aug,80,60
+Wisconsin,Sep,72,51
+Wisconsin,Oct,58,38
+Wisconsin,Nov,42,24
+Wisconsin,Dec,28,10
