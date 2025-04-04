@@ -38,68 +38,41 @@ import EmailProjectionsFormTailwind from './EmailProjectionsFormTailwind';
 import stateWorkabilityData from './State based temps/state_workability_data_FINAL_FULL.json';
 // import logo from './assets/ace-coatings-logo.png'; // Uncomment if needed
 
-// 1) Global Keyframes for Pulse Animation
-const pulseKeyframes = `
-@keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7); }
-  70% { box-shadow: 0 0 0 10px rgba(33, 150, 243, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
-}
-`;
-const GlobalStyles = () => <style>{pulseKeyframes}</style>;
-
-/* ------------------ Chart.js Registration ------------------ */
-ChartJS.register(
-  LinearScale,
-  PointElement,
-  LineElement,
-  LineController,
-  ScatterController,
-  Title,
-  ChartTooltip,
-  Legend,
-  Filler
-);
-
-/* ------------------ Helper: Interpolate Line ------------------ */
-function interpolateLine(lineData, fraction) {
-  if (!lineData.length) return 0;
-  if (fraction <= lineData[0].x) return lineData[0].y;
-  if (fraction >= lineData[lineData.length - 1].x) {
-    return lineData[lineData.length - 1].y;
-  }
-  for (let i = 1; i < lineData.length; i++) {
-    if (fraction <= lineData[i].x) {
-      const start = lineData[i - 1];
-      const end = lineData[i];
-      const d = (fraction - start.x) / (end.x - start.x);
-      return start.y + d * (end.y - start.y);
-    }
-  }
-  return lineData[lineData.length - 1].y;
-}
-
-/* ------------------ ACE Config & Constants ------------------ */
+// ------------------ Global Constants ------------------
 const aceConfig = {
   title: 'Ace Coatings ROI Calculator',
-  baseJobsPerWeek: 2, // 2 jobs per week per crew
+  baseJobsPerWeek: 2,
 };
-
 const grossRevenuePerJob = 6250;
 const averageCostPerJob = 2400;
-const netRevenuePerJob = grossRevenuePerJob - averageCostPerJob; // 3850
-const depositPerJob = grossRevenuePerJob * 0.5; // 3125
+const netRevenuePerJob = grossRevenuePerJob - averageCostPerJob;
+const depositPerJob = grossRevenuePerJob * 0.5;
 const totalStartupCost = 15000;
-const FINAL_PAYMENT_DELAY = 42; // days
 
-/* ------------------ Ad Spend Mapping ------------------ */
+const aggressionSettings = {
+  Aggressive: {
+    thresholdJobs: 8,
+    payoutDelay: 28,
+    dotColor: 'rgba(255,0,0,0.8)',
+  },
+  Moderate: {
+    thresholdJobs: 12,
+    payoutDelay: 42,
+    dotColor: 'rgba(255,235,59,0.8)',
+  },
+  Conservative: {
+    thresholdJobs: 20,
+    payoutDelay: 70,
+    dotColor: 'rgba(0,255,0,0.8)',
+  },
+};
+
 const adSpendMapping = {
   AllIn: { label: 'All-In ($75/day)', daily: 75 },
   DoubleDown: { label: 'Double Down ($50/day)', daily: 50 },
   PlayItSafe: { label: 'Play it Safe ($30/day)', daily: 30 },
 };
 
-/* ------------------ MUI Theme ------------------ */
 const theme = createTheme({
   palette: {
     mode: 'light',
@@ -113,7 +86,111 @@ const theme = createTheme({
   },
 });
 
-/* ------------------ Booking Tag Plugin ------------------ */
+// ------------------ Global Helper Functions ------------------
+function interpolateLine(lineData, fraction) {
+  if (!lineData.length) return 0;
+  if (fraction <= lineData[0].x) return lineData[0].y;
+  if (fraction >= lineData[lineData.length - 1].x)
+    return lineData[lineData.length - 1].y;
+  for (let i = 1; i < lineData.length; i++) {
+    if (fraction <= lineData[i].x) {
+      const start = lineData[i - 1];
+      const end = lineData[i];
+      const d = (fraction - start.x) / (end.x - start.x);
+      return start.y + d * (end.y - start.y);
+    }
+  }
+  return lineData[lineData.length - 1].y;
+}
+
+function roundToNearestHalf(num) {
+  const fractional = num - Math.floor(num);
+  return fractional <= 0.55 ? Math.floor(num) + 0.5 : Math.ceil(num);
+}
+
+// ------------------ Global Styles ------------------
+const pulseKeyframes = `
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(33,150,243,0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(33,150,243,0); }
+  100% { box-shadow: 0 0 0 0 rgba(33,150,243,0); }
+}
+`;
+const GlobalStyles = () => <style>{pulseKeyframes}</style>;
+
+// ------------------ Chart Plugins ------------------
+
+// We'll use a module-level variable to control the fade-in of the bracket line.
+let bracketAlpha = 0;
+
+// Bracket Line Plugin: Draws a dark green bracket that follows the revenue curve exactly between ~4 and ~10 weeks,
+// with tiny vertical caps at the start and end, and fades in over 1 second.
+const bracketLinePlugin = {
+  id: 'bracketLinePlugin',
+  afterDraw(chart) {
+    const {
+      ctx,
+      chartArea,
+      scales: { x: xScale, y: yScale },
+    } = chart;
+    // Increase alpha gradually (approximate fade-in over 1 second; update every 16ms)
+    bracketAlpha = Math.min(1, bracketAlpha + 0.05);
+    ctx.save();
+    ctx.globalAlpha = bracketAlpha;
+    // Convert 4 and 10 weeks to months (weeks/4.3)
+    const lowerBoundMonth = 4 / 4.3;
+    const upperBoundMonth = 10 / 4.3;
+    // Retrieve the revenue data points from "Cumulative Revenue ($)" dataset
+    const lineDataset = chart.data.datasets.find(
+      (ds) => ds.label === 'Cumulative Revenue ($)'
+    );
+    if (!lineDataset) return;
+    const lineData = lineDataset.data;
+    // Filter points between lowerBoundMonth and upperBoundMonth
+    const bracketData = lineData.filter(
+      (pt) => pt.x >= lowerBoundMonth && pt.x <= upperBoundMonth
+    );
+    if (bracketData.length === 0) return;
+    ctx.strokeStyle = 'rgba(0,100,0,1)'; // Dark green
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    const firstPt = bracketData[0];
+    ctx.moveTo(
+      xScale.getPixelForValue(firstPt.x),
+      yScale.getPixelForValue(firstPt.y)
+    );
+    bracketData.forEach((pt) => {
+      ctx.lineTo(xScale.getPixelForValue(pt.x), yScale.getPixelForValue(pt.y));
+    });
+    ctx.stroke();
+    // Draw tiny vertical caps at the start and end (10px tall)
+    const xPixelStart = xScale.getPixelForValue(bracketData[0].x);
+    const yPixelStart = yScale.getPixelForValue(bracketData[0].y);
+    const xPixelEnd = xScale.getPixelForValue(
+      bracketData[bracketData.length - 1].x
+    );
+    const yPixelEnd = yScale.getPixelForValue(
+      bracketData[bracketData.length - 1].y
+    );
+    ctx.beginPath();
+    ctx.moveTo(xPixelStart, yPixelStart);
+    ctx.lineTo(xPixelStart, yPixelStart - 10);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(xPixelEnd, yPixelEnd);
+    ctx.lineTo(xPixelEnd, yPixelEnd - 10);
+    ctx.stroke();
+    ctx.restore();
+    // If fade-in is not complete, schedule another draw.
+    if (bracketAlpha < 1) {
+      setTimeout(() => {
+        chart.draw();
+      }, 16);
+    }
+  },
+};
+
+// Booking Tag Plugin: Draws the active dot label.
 const bookingTagPlugin = {
   id: 'bookingTagPlugin',
   afterDatasetsDraw(chart) {
@@ -122,17 +199,16 @@ const bookingTagPlugin = {
       scales: { x: xScale, y: yScale },
     } = chart;
     chart.data.datasets.forEach((ds) => {
-      if (ds.label === 'Booking Targets') {
+      if (ds.label === 'Active Crew Dot') {
         ds.data.forEach((point) => {
           const xPixel = xScale.getPixelForValue(point.x);
           const yPixel = yScale.getPixelForValue(point.y);
-          const tagText = point.customLabel;
           ctx.save();
           ctx.fillStyle = 'white';
           ctx.strokeStyle = '#0D47A1';
           ctx.lineWidth = 1;
           ctx.font = 'bold 12px Roboto';
-          const textWidth = ctx.measureText(tagText).width;
+          const textWidth = ctx.measureText(point.customLabel).width;
           const padding = 4;
           const rectWidth = textWidth + padding * 2;
           const rectHeight = 20;
@@ -143,7 +219,7 @@ const bookingTagPlugin = {
           ctx.fillStyle = '#0D47A1';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(tagText, xPixel, rectY + rectHeight / 2);
+          ctx.fillText(point.customLabel, xPixel, rectY + rectHeight / 2);
           ctx.restore();
         });
       }
@@ -151,16 +227,21 @@ const bookingTagPlugin = {
   },
 };
 
-/* ------------------ Helper: Round to Nearest 0.5 ------------------ */
-function roundToNearestHalf(num) {
-  const fractional = num - Math.floor(num);
-  if (fractional <= 0.55) {
-    return Math.floor(num) + 0.5;
-  } else {
-    return Math.ceil(num);
-  }
-}
+ChartJS.register(
+  LinearScale,
+  PointElement,
+  LineElement,
+  LineController,
+  ScatterController,
+  Title,
+  ChartTooltip,
+  Legend,
+  Filler,
+  bookingTagPlugin,
+  bracketLinePlugin
+);
 
+// ------------------ Main Component ------------------
 export default function AceCoatingsROICalculator() {
   return (
     <>
@@ -171,18 +252,18 @@ export default function AceCoatingsROICalculator() {
 }
 
 function MainCalculator() {
-  // Basic Inputs / State – default: no state selected
+  const localTheme = theme;
+
+  // Basic state for inputs
   const [selectedState, setSelectedState] = useState('');
-  const [adSpendOption, setAdSpendOption] = useState('PlayItSafe'); // Conservative default
-  const [timeFrame, setTimeFrame] = useState(6); // Default 6 months
-  // Base crew is always 1; additional crews stored as day numbers.
+  const [adSpendOption, setAdSpendOption] = useState('PlayItSafe');
+  const [timeFrame, setTimeFrame] = useState(6);
+  const [aggressionLevel, setAggressionLevel] = useState('Conservative');
   const [crewAdditions, setCrewAdditions] = useState([]);
-  const [showTargets, setShowTargets] = useState(true);
   const [toastMessage, setToastMessage] = useState('');
   const [openEmailForm, setOpenEmailForm] = useState(false);
   const [chartExpanded, setChartExpanded] = useState(false);
 
-  // Global month names array – declared once.
   const monthNames = [
     'January',
     'February',
@@ -199,23 +280,21 @@ function MainCalculator() {
   ];
   const currentMonthIndex = new Date().getMonth();
 
-  // If no state is selected, show the "SELECT STATE" message in the chart area.
+  // Simulation & Dot Logic – if state is selected
   let dayData = [];
   let monthlyNetRevenueDisplay = '0';
   let yearlyNetRevenueDisplay = '0';
   let breakEvenDisplay = 'Not reached';
-  let bookingDots = [];
+  let activeDotDataset = null;
   let monthlyMarkers = [];
   let totalWorkableWeeks = 0;
+
   if (selectedState) {
     const stateData = stateWorkabilityData[selectedState];
     const monthlyScoresRaw = stateData.monthly_scores;
     totalWorkableWeeks = stateData.total_workable_weeks;
-
-    const effectiveCrewCount = Math.min(1 + crewAdditions.length, 4);
     const baseDailyAdSpend = adSpendMapping[adSpendOption]?.daily || 0;
     const totalDays = timeFrame * 30;
-
     let cumulative = 0;
     dayData = [];
     for (let day = 1; day <= totalDays; day++) {
@@ -226,7 +305,6 @@ function MainCalculator() {
       const rawMonthIndex = Math.floor((day - 1) / 30);
       const monthIndex = (currentMonthIndex + rawMonthIndex) % 12;
       const monthlyScore = monthlyScoresRaw[monthIndex];
-
       const dailyCapacity =
         (currentCrewCount * aceConfig.baseJobsPerWeek * 4.3) / 30;
       const dailyAdSpend = baseDailyAdSpend * currentCrewCount;
@@ -234,16 +312,14 @@ function MainCalculator() {
       const jobsDone = Math.min(dailyCapacity, dailyAppointments);
       const depositRevenue = jobsDone * depositPerJob;
       let finalPaymentRevenue = 0;
-      if (day > FINAL_PAYMENT_DELAY) {
+      if (day > aggressionSettings[aggressionLevel].payoutDelay) {
         finalPaymentRevenue = jobsDone * (netRevenuePerJob - depositPerJob);
       }
       const variableRevenue =
         (depositRevenue + finalPaymentRevenue) * monthlyScore;
       const adjustedAdSpend = dailyAdSpend * monthlyScore;
       let dailyProfit = variableRevenue - adjustedAdSpend - 20;
-      if (day === 1) {
-        dailyProfit -= totalStartupCost;
-      }
+      if (day === 1) dailyProfit -= totalStartupCost;
       cumulative += dailyProfit;
       dayData.push({ x: day / 30, y: cumulative });
     }
@@ -267,11 +343,9 @@ function MainCalculator() {
         }
       }
       const breakEvenWeeks = exactBreakEvenDay / 7;
-      const rounded = roundToNearestHalf(breakEvenWeeks);
-      breakEvenDisplay = `${rounded} weeks`;
+      breakEvenDisplay = `${roundToNearestHalf(breakEvenWeeks)} weeks`;
     }
 
-    // Monthly Markers
     monthlyMarkers = dayData.filter((_, idx) => (idx + 1) % 30 === 0);
 
     let monthlyNetRevenueLast30 = 0;
@@ -287,7 +361,6 @@ function MainCalculator() {
       { maximumFractionDigits: 0 }
     );
 
-    // Yearly Revenue
     let yearlyNetRevenue = 0;
     if (timeFrame >= 12) {
       const dayIndex = 12 * 30 - 1;
@@ -303,53 +376,47 @@ function MainCalculator() {
       maximumFractionDigits: 0,
     });
 
-    // Booking Dots
-    const currentThresholds =
-      crewAdditions.length > 0 ? [4, 8, 10] : [8, 10, 12];
-    function findThresholdDay(thresholdWeeks) {
-      const baseline =
-        crewAdditions.length > 0 ? Math.max(...crewAdditions) : 0;
-      if (baseline > 0) {
-        return baseline + thresholdWeeks * 7;
-      } else {
-        const neededAppointments =
-          thresholdWeeks * (1 * aceConfig.baseJobsPerWeek);
-        if (baseDailyAdSpend <= 0) return totalDays;
-        const dailyAppointments = (baseDailyAdSpend / 36) * 0.5;
-        return neededAppointments / dailyAppointments;
+    // Active Dot Logic: For the current crew (base crew if none added)
+    const lastCrewStart =
+      crewAdditions.length > 0 ? Math.max(...crewAdditions) : 1;
+    let cumulativeJobCount = 0;
+    let activeDotDay = null;
+    const thresholdJobs = aggressionSettings[aggressionLevel].thresholdJobs;
+    for (let day = lastCrewStart; day <= totalDays; day++) {
+      const currentCrewCount = Math.min(
+        1 + crewAdditions.filter((d) => d <= day).length,
+        4
+      );
+      const rawMonthIndex = Math.floor((day - 1) / 30);
+      const monthIndex = (currentMonthIndex + rawMonthIndex) % 12;
+      const monthlyScore = monthlyScoresRaw[monthIndex];
+      const dailyCapacity =
+        (currentCrewCount * aceConfig.baseJobsPerWeek * 4.3) / 30;
+      const dailyAdSpend = baseDailyAdSpend * currentCrewCount;
+      const dailyAppointments = (dailyAdSpend / 36) * 0.5;
+      const jobsDone = Math.min(dailyCapacity, dailyAppointments);
+      cumulativeJobCount += jobsDone / currentCrewCount;
+      if (!activeDotDay && cumulativeJobCount >= thresholdJobs) {
+        activeDotDay = day;
+        break;
       }
     }
-    if (showTargets) {
-      bookingDots = [];
-      currentThresholds.forEach((thr) => {
-        let thresholdDay = findThresholdDay(thr);
-        thresholdDay = Math.min(Math.max(thresholdDay, 1), totalDays);
-        const xPos = thresholdDay / 30;
-        const yPos = interpolateLine(dayData, xPos);
-        const label =
-          thr === currentThresholds[0]
-            ? 'All-In'
-            : thr === currentThresholds[1]
-            ? 'Double Down'
-            : 'Call';
-        const color =
-          thr === currentThresholds[0]
-            ? 'red'
-            : thr === currentThresholds[1]
-            ? 'yellow'
-            : 'green';
-        bookingDots.push({
-          x: xPos,
-          y: yPos,
-          customLabel: label,
-          color: color,
-          day: thresholdDay,
-        });
-      });
-    }
+    if (!activeDotDay) activeDotDay = totalDays;
+    const dotX = activeDotDay / 30;
+    const dotY = interpolateLine(dayData, dotX);
+    activeDotDataset = {
+      type: 'scatter',
+      label: 'Active Crew Dot',
+      data: [{ x: dotX, y: dotY, customLabel: 'Add Crew' }],
+      pointRadius: 10,
+      backgroundColor: aggressionSettings[aggressionLevel].dotColor,
+      borderColor: '#0D47A1',
+      borderWidth: 2,
+      order: 999, // Ensure dot is drawn on top
+      z: 999,
+    };
   }
 
-  // Chart Data & Options
   const lineDataset = {
     type: 'line',
     label: 'Cumulative Revenue ($)',
@@ -363,39 +430,31 @@ function MainCalculator() {
     order: 2,
     z: 2,
   };
+
   const monthlyMarkerDataset = {
     type: 'scatter',
     label: 'Monthly Markers',
-    data: monthlyMarkers,
+    data: dayData.filter((_, idx) => (idx + 1) % 30 === 0),
     pointRadius: 6,
     pointBackgroundColor: '#0D47A1',
     pointBorderColor: '#FFFFFF',
     pointBorderWidth: 2,
-    order: 2,
-    z: 2,
-  };
-  const bookingTargetDataset = {
-    type: 'scatter',
-    label: 'Booking Targets',
-    data: bookingDots,
-    pointRadius: 10,
-    pointBorderColor: '#0D47A1',
-    pointBorderWidth: 2,
-    pointBackgroundColor: (ctx) => {
-      const idx = ctx.dataIndex;
-      const color = bookingDots[idx]?.color;
-      if (color === 'red') return 'rgba(255,0,0,0.8)';
-      if (color === 'yellow') return 'rgba(255,235,59,0.8)';
-      if (color === 'green') return 'rgba(0,255,0,0.8)';
-      return 'rgba(0,0,0,0.8)';
-    },
-    order: 1,
+    order: 3,
     z: 3,
   };
-  const chartData = {
-    datasets: [lineDataset, monthlyMarkerDataset, bookingTargetDataset],
-  };
+
+  const datasets = [lineDataset, monthlyMarkerDataset];
+  if (activeDotDataset) datasets.push(activeDotDataset);
+  const chartData = { datasets };
+
+  // Create a unique key for the Chart to force remounting when inputs change.
+  const chartKey = `${selectedState}-${adSpendOption}-${timeFrame}-${aggressionLevel}-${crewAdditions.length}`;
+
   const chartOptions = {
+    animation: {
+      duration: 1000,
+      easing: 'easeOutCubic',
+    },
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -408,7 +467,7 @@ function MainCalculator() {
               ctx.parsed.y?.toLocaleString(undefined, {
                 maximumFractionDigits: 0,
               }) || '0';
-            if (ctx.dataset.label === 'Booking Targets') {
+            if (ctx.dataset.label === 'Active Crew Dot') {
               return `Click to add crew → $${val}`;
             }
             if (ctx.dataset.label === 'Monthly Markers') {
@@ -420,7 +479,8 @@ function MainCalculator() {
           },
         },
       },
-      bookingTagPlugin,
+      bookingTagPlugin: {},
+      bracketLinePlugin: {},
     },
     scales: {
       x: {
@@ -448,15 +508,12 @@ function MainCalculator() {
       },
     },
     onClick: (evt, elements) => {
-      if (elements.length > 0) {
+      if (elements.length > 0 && activeDotDataset) {
         const element = elements[0];
-        const dsLabel = chartData.datasets[element.datasetIndex].label;
-        if (dsLabel === 'Booking Targets') {
-          const idx = element.index;
-          const targetDot = bookingDots[idx];
-          if (targetDot) {
-            handleAddCrewFromBookingTarget(targetDot.day);
-          }
+        if (
+          chartData.datasets[element.datasetIndex].label === 'Active Crew Dot'
+        ) {
+          handleAddCrewFromBookingTarget(activeDotDataset.data[0].x * 30);
         }
       }
     },
@@ -472,7 +529,6 @@ function MainCalculator() {
     setAdSpendOption('PlayItSafe');
     setTimeFrame(6);
     setCrewAdditions([]);
-    setShowTargets(true);
     setToastMessage('Chart reset to default conservative settings.');
     setTimeout(() => setToastMessage(''), 3000);
   }
@@ -493,13 +549,13 @@ function MainCalculator() {
   }
 
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={localTheme}>
       <Container
         maxWidth='lg'
         sx={{
           py: 6,
           px: { xs: 2, md: 4 },
-          backgroundColor: theme.palette.background.default,
+          backgroundColor: localTheme.palette.background.default,
           minHeight: '100vh',
         }}
       >
@@ -522,13 +578,13 @@ function MainCalculator() {
                   variant='h4'
                   sx={{
                     fontWeight: 'bold',
-                    color: theme.palette.text.primary,
+                    color: localTheme.palette.text.primary,
                     mb: 3,
                   }}
                 >
                   Ace Coatings ROI Calculator
                 </Typography>
-                {/* State Dropdown (pulses if not selected) */}
+                {/* State Dropdown */}
                 <Typography
                   variant='subtitle2'
                   sx={{ mb: 1, fontWeight: 'bold', color: '#424242' }}
@@ -591,9 +647,7 @@ function MainCalculator() {
                   variant='caption'
                   sx={{ display: 'block', color: '#757575', mb: 2 }}
                 >
-                  This assumes a 50% close rate of inbound leads. The more you
-                  spend on ads, the more likely leads you will have to close and
-                  book.
+                  This assumes a 50% close rate of inbound leads.
                 </Typography>
                 {/* Time Frame */}
                 <Typography
@@ -636,6 +690,43 @@ function MainCalculator() {
                     –
                   </Button>
                 </Box>
+                {/* Aggression Level Selector */}
+                <Typography
+                  variant='subtitle2'
+                  sx={{ mb: 1, fontWeight: 'bold', color: '#424242' }}
+                >
+                  How are you planning to scale?
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                  <Button
+                    variant={
+                      aggressionLevel === 'Aggressive'
+                        ? 'contained'
+                        : 'outlined'
+                    }
+                    onClick={() => setAggressionLevel('Aggressive')}
+                  >
+                    Aggressive
+                  </Button>
+                  <Button
+                    variant={
+                      aggressionLevel === 'Moderate' ? 'contained' : 'outlined'
+                    }
+                    onClick={() => setAggressionLevel('Moderate')}
+                  >
+                    Moderate
+                  </Button>
+                  <Button
+                    variant={
+                      aggressionLevel === 'Conservative'
+                        ? 'contained'
+                        : 'outlined'
+                    }
+                    onClick={() => setAggressionLevel('Conservative')}
+                  >
+                    Conservative
+                  </Button>
+                </Box>
                 {/* Crew Count */}
                 <Typography
                   variant='subtitle2'
@@ -658,8 +749,10 @@ function MainCalculator() {
                     size='small'
                     sx={{ ml: 1 }}
                     onClick={() => {
-                      if (bookingDots.length > 0) {
-                        handleAddCrewFromBookingTarget(bookingDots[0].day);
+                      if (activeDotDataset) {
+                        handleAddCrewFromBookingTarget(
+                          activeDotDataset.data[0].x * 30
+                        );
                       }
                     }}
                   >
@@ -690,28 +783,6 @@ function MainCalculator() {
                     –
                   </Button>
                 </Box>
-                {/* Hide Booking Targets */}
-                <Button
-                  variant='outlined'
-                  fullWidth
-                  onClick={() => setShowTargets(!showTargets)}
-                  sx={{
-                    mb: 2,
-                    borderWidth: '2px',
-                    borderColor: '#0D47A1',
-                    color: '#0D47A1',
-                    fontWeight: 'bold',
-                    '&:hover': {
-                      borderWidth: '2px',
-                      borderColor: '#0D47A1',
-                      backgroundColor: '#E3F2FD',
-                    },
-                  }}
-                >
-                  {showTargets
-                    ? 'Hide Booking Targets'
-                    : 'Show Booking Targets'}
-                </Button>
               </Box>
               <Box>
                 <Button
@@ -747,7 +818,10 @@ function MainCalculator() {
                 <Box>
                   <Typography
                     variant='h3'
-                    sx={{ fontWeight: 400, color: theme.palette.text.primary }}
+                    sx={{
+                      fontWeight: 400,
+                      color: localTheme.palette.text.primary,
+                    }}
                   >
                     ${yearlyNetRevenueDisplay}
                   </Typography>
@@ -758,7 +832,10 @@ function MainCalculator() {
                 <Box>
                   <Typography
                     variant='h3'
-                    sx={{ fontWeight: 400, color: theme.palette.text.primary }}
+                    sx={{
+                      fontWeight: 400,
+                      color: localTheme.palette.text.primary,
+                    }}
                   >
                     ${monthlyNetRevenueDisplay}
                   </Typography>
@@ -768,7 +845,6 @@ function MainCalculator() {
                 </Box>
               </Box>
 
-              {/** Chart Area: If no state selected, show "SELECT STATE" message */}
               {!selectedState ? (
                 <Box
                   sx={{
@@ -792,7 +868,12 @@ function MainCalculator() {
                     position: 'relative',
                   }}
                 >
-                  <Chart type='line' data={chartData} options={chartOptions} />
+                  <Chart
+                    key={chartKey}
+                    type='line'
+                    data={chartData}
+                    options={chartOptions}
+                  />
                 </Box>
               )}
 
@@ -823,7 +904,6 @@ function MainCalculator() {
             </Grid>
           </Grid>
 
-          {/* LOWER UI ROW: ROI Break Even, Per Job Stats & Workable Weeks */}
           <Box sx={{ mt: 4 }}>
             <Grid container spacing={3}>
               <Grid item xs={12} md={4}>
@@ -896,7 +976,6 @@ function MainCalculator() {
             </Grid>
           </Box>
 
-          {/* "How We Calculate Revenue" Accordion */}
           <Box
             sx={{ border: '2px solid #0D47A1', borderRadius: 2, mt: 4, p: 1 }}
           >
@@ -921,8 +1000,8 @@ function MainCalculator() {
                   week.
                   <br />
                   <strong>Deposit Logic:</strong> A 50% deposit is collected
-                  upfront and the final net payment is received after a 42-day
-                  delay.
+                  upfront and the final net payment is received after a dynamic
+                  delay based on your scaling aggression.
                   <br />
                   <strong>Break-Even:</strong> The point where cumulative cash
                   flow first reaches $0.
@@ -931,7 +1010,6 @@ function MainCalculator() {
             </Accordion>
           </Box>
 
-          {/* Disclaimer */}
           <Box sx={{ mt: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
             <Typography variant='subtitle2' sx={{ fontStyle: 'italic' }}>
               <strong>Disclaimer:</strong> The results shown are estimates only
@@ -942,7 +1020,6 @@ function MainCalculator() {
           </Box>
         </Paper>
 
-        {/* Toast Notification */}
         {toastMessage && (
           <Box
             sx={{
@@ -962,7 +1039,6 @@ function MainCalculator() {
           </Box>
         )}
 
-        {/* Expand Chart Dialog */}
         <Dialog
           open={chartExpanded}
           onClose={handleCloseExpand}
@@ -971,7 +1047,12 @@ function MainCalculator() {
         >
           <DialogContent>
             <Box sx={{ width: '100%', height: '80vh' }}>
-              <Chart type='line' data={chartData} options={chartOptions} />
+              <Chart
+                key={chartKey}
+                type='line'
+                data={chartData}
+                options={chartOptions}
+              />
             </Box>
           </DialogContent>
           <DialogActions>
@@ -981,7 +1062,6 @@ function MainCalculator() {
           </DialogActions>
         </Dialog>
 
-        {/* Email Projections Modal */}
         <EmailProjectionsFormTailwind
           open={openEmailForm}
           onClose={() => setOpenEmailForm(false)}
@@ -993,6 +1073,9 @@ function MainCalculator() {
             }</p>
             <p><strong>Time Frame:</strong> ${timeFrame} months</p>
             <p><strong>Crew Count:</strong> ${1 + crewAdditions.length}</p>
+            <p><strong>Aggression Level:</strong> ${aggressionLevel} (Final payment after ${
+            aggressionSettings[aggressionLevel].payoutDelay
+          } days)</p>
             <p><strong>Monthly Revenue:</strong> $${monthlyNetRevenueDisplay}</p>
             <p><strong>Yearly Revenue:</strong> $${yearlyNetRevenueDisplay}</p>
             <p><strong>Break-Even:</strong> ${breakEvenDisplay}</p>
