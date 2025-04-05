@@ -2,14 +2,14 @@ import chromium from 'chrome-aws-lambda';
 import AWS from 'aws-sdk';
 import { v4 as uuidv4 } from 'uuid';
 
-// Initialize S3 client with region from environment variables
+// Initialize S3 client (uses env vars for credentials and region)
 const s3 = new AWS.S3({
   region: process.env.AWS_REGION,
-  // AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are automatically picked up from env vars
+  // AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are automatically picked up from process.env
 });
 
 export default async function handler(req, res) {
-  // Only accept POST requests
+  // Only allow POST requests
   if (req.method !== 'POST') {
     return res
       .status(405)
@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Generate PDF from HTML using Puppeteer
+    // Generate the PDF using headless Chrome
     const browser = await chromium.puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
@@ -36,25 +36,25 @@ export default async function handler(req, res) {
     const pdfBuffer = await page.pdf({ format: 'A4' });
     await browser.close();
 
-    // Generate a unique filename using timestamp and UUID
+    // Create a unique filename: you can use a timestamp and a UUID
     const filename = `${Date.now()}-${uuidv4()}.pdf`;
 
-    // Upload the PDF to S3 with public-read ACL
+    // Configure S3 upload parameters
     const params = {
-      Bucket: process.env.S3_BUCKET_NAME, // "ace-coatings-roi-pdfs"
+      Bucket: process.env.S3_BUCKET_NAME, // Should be set to "ace-coatings-roi-pdfs"
       Key: filename,
       Body: pdfBuffer,
       ContentType: 'application/pdf',
-      ACL: 'public-read',
+      ACL: 'public-read', // This makes the file accessible via a public URL
     };
 
-    // Use s3.upload() which returns a promise
+    // Upload the PDF to S3
     const s3Result = await s3.upload(params).promise();
 
-    // Optional: Log the upload for analytics
-    console.log('PDF uploaded to S3:', s3Result.Location);
+    // Optional: Log for analytics
+    console.log('PDF successfully uploaded to S3 at:', s3Result.Location);
 
-    // Respond with the public URL of the uploaded PDF
+    // Return JSON response with the public URL
     return res.status(200).json({
       success: true,
       url: s3Result.Location, // e.g., https://ace-coatings-roi-pdfs.s3.us-east-2.amazonaws.com/<filename>.pdf
@@ -70,7 +70,7 @@ export default async function handler(req, res) {
 
 /*
 Future Security Enhancements:
-- Implement API key header validation to restrict access
-- Add rate limiting to prevent abuse
-- Consider using presigned URLs or lifecycle rules for PDF expiration
+- API key header validation to restrict access
+- Rate limiting to prevent abuse
+- Lifecycle rules or presigned URLs for managing PDF expiration
 */
