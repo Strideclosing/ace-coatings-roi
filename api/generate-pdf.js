@@ -1,11 +1,10 @@
-import puppeteer from 'puppeteer';
+import chromium from 'chrome-aws-lambda';
 import AWS from 'aws-sdk';
 import { v4 as uuidv4 } from 'uuid';
 
 // Initialize S3 client with region from environment variables
 const s3 = new AWS.S3({
   region: process.env.AWS_REGION,
-  // AWS credentials are picked up from environment variables
 });
 
 export default async function handler(req, res) {
@@ -23,10 +22,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Launch Puppeteer with explicit executablePath and necessary flags
-    const browser = await puppeteer.launch({
-      executablePath: await puppeteer.executablePath(),
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    // Launch Chromium using chrome-aws-lambda
+    const browser = await chromium.puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless,
     });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
