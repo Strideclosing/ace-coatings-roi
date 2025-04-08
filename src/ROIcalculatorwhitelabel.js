@@ -120,75 +120,9 @@ const GlobalStyles = () => <style>{pulseKeyframes}</style>;
 
 // ------------------ Chart Plugins ------------------
 
-// We'll use a module-level variable to control the fade-in of the bracket line.
-let bracketAlpha = 0;
-
-// Bracket Line Plugin: Draws a dark green bracket that follows the revenue curve exactly between ~4 and ~10 weeks,
-// with tiny vertical caps at the start and end, and fades in over 1 second.
-const bracketLinePlugin = {
-  id: 'bracketLinePlugin',
-  afterDraw(chart) {
-    const {
-      ctx,
-      chartArea,
-      scales: { x: xScale, y: yScale },
-    } = chart;
-    // Increase alpha gradually (approximate fade-in over 1 second; update every 16ms)
-    bracketAlpha = Math.min(1, bracketAlpha + 0.05);
-    ctx.save();
-    ctx.globalAlpha = bracketAlpha;
-    // Convert 4 and 10 weeks to months (weeks/4.3)
-    const lowerBoundMonth = 4 / 4.3;
-    const upperBoundMonth = 10 / 4.3;
-    // Retrieve the revenue data points from "Cumulative Revenue ($)" dataset
-    const lineDataset = chart.data.datasets.find(
-      (ds) => ds.label === 'Cumulative Revenue ($)'
-    );
-    if (!lineDataset) return;
-    const lineData = lineDataset.data;
-    // Filter points between lowerBoundMonth and upperBoundMonth
-    const bracketData = lineData.filter(
-      (pt) => pt.x >= lowerBoundMonth && pt.x <= upperBoundMonth
-    );
-    if (bracketData.length === 0) return;
-    ctx.strokeStyle = 'rgba(0,100,0,1)'; // Dark green
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    const firstPt = bracketData[0];
-    ctx.moveTo(
-      xScale.getPixelForValue(firstPt.x),
-      yScale.getPixelForValue(firstPt.y)
-    );
-    bracketData.forEach((pt) => {
-      ctx.lineTo(xScale.getPixelForValue(pt.x), yScale.getPixelForValue(pt.y));
-    });
-    ctx.stroke();
-    // Draw tiny vertical caps at the start and end (10px tall)
-    const xPixelStart = xScale.getPixelForValue(bracketData[0].x);
-    const yPixelStart = yScale.getPixelForValue(bracketData[0].y);
-    const xPixelEnd = xScale.getPixelForValue(
-      bracketData[bracketData.length - 1].x
-    );
-    const yPixelEnd = yScale.getPixelForValue(
-      bracketData[bracketData.length - 1].y
-    );
-    ctx.beginPath();
-    ctx.moveTo(xPixelStart, yPixelStart);
-    ctx.lineTo(xPixelStart, yPixelStart - 10);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(xPixelEnd, yPixelEnd);
-    ctx.lineTo(xPixelEnd, yPixelEnd - 10);
-    ctx.stroke();
-    ctx.restore();
-    // If fade-in is not complete, schedule another draw.
-    if (bracketAlpha < 1) {
-      setTimeout(() => {
-        chart.draw();
-      }, 16);
-    }
-  },
-};
+// Remove the bracketLinePlugin visual drawing for green brackets.
+// We still keep the underlying logic (if any) in your simulation calculations,
+// but visually, we are no longer drawing the bracket.
 
 // Booking Tag Plugin: Draws the active dot label.
 const bookingTagPlugin = {
@@ -237,8 +171,8 @@ ChartJS.register(
   ChartTooltip,
   Legend,
   Filler,
-  bookingTagPlugin,
-  bracketLinePlugin
+  bookingTagPlugin
+  // Note: bracketLinePlugin removed from registration.
 );
 
 // ------------------ Main Component ------------------
@@ -254,7 +188,7 @@ export default function AceCoatingsROICalculator() {
 function MainCalculator() {
   const localTheme = theme;
 
-  // Basic state for inputs
+  // State for user inputs
   const [selectedState, setSelectedState] = useState('');
   const [adSpendOption, setAdSpendOption] = useState('PlayItSafe');
   const [timeFrame, setTimeFrame] = useState(6);
@@ -280,7 +214,22 @@ function MainCalculator() {
   ];
   const currentMonthIndex = new Date().getMonth();
 
-  // Simulation & Dot Logic – if state is selected
+  // Determine projection multiplier and label based on timeFrame.
+  // Simulation always based on 12 months.
+  let projectionMultiplier = 1;
+  let projectionLabel = '1 Year Projection';
+  if (timeFrame > 12 && timeFrame <= 24) {
+    projectionMultiplier = 2;
+    projectionLabel = '2 Year Projection';
+  } else if (timeFrame > 24 && timeFrame <= 36) {
+    projectionMultiplier = 3;
+    projectionLabel = '3 Year Projection';
+  }
+
+  // Always simulate a fixed 12-month period (360 days).
+  const simulationDays = 12 * 30;
+
+  // Simulation & Dot Logic – run simulation if state is selected
   let dayData = [];
   let monthlyNetRevenueDisplay = '0';
   let yearlyNetRevenueDisplay = '0';
@@ -294,10 +243,11 @@ function MainCalculator() {
     const monthlyScoresRaw = stateData.monthly_scores;
     totalWorkableWeeks = stateData.total_workable_weeks;
     const baseDailyAdSpend = adSpendMapping[adSpendOption]?.daily || 0;
-    const totalDays = timeFrame * 30;
+
     let cumulative = 0;
     dayData = [];
-    for (let day = 1; day <= totalDays; day++) {
+    // Run simulation for a full 12 months irrespective of user-selected timeFrame.
+    for (let day = 1; day <= simulationDays; day++) {
       const currentCrewCount = Math.min(
         1 + crewAdditions.filter((d) => d <= day).length,
         4
@@ -305,10 +255,23 @@ function MainCalculator() {
       const rawMonthIndex = Math.floor((day - 1) / 30);
       const monthIndex = (currentMonthIndex + rawMonthIndex) % 12;
       const monthlyScore = monthlyScoresRaw[monthIndex];
+
       const dailyCapacity =
         (currentCrewCount * aceConfig.baseJobsPerWeek * 4.3) / 30;
-      const dailyAdSpend = baseDailyAdSpend * currentCrewCount;
-      const dailyAppointments = (dailyAdSpend / 36) * 0.5;
+
+      // Ad Spend Adjustment: apply thresholds.
+      let adjustedDailyAdSpend = 0;
+      if (monthlyScore < 0.3) {
+        adjustedDailyAdSpend = 0;
+      } else if (monthlyScore >= 0.3 && monthlyScore < 0.5) {
+        const scale = (monthlyScore - 0.3) / (0.5 - 0.3);
+        adjustedDailyAdSpend =
+          baseDailyAdSpend * currentCrewCount * (scale * 0.5);
+      } else {
+        adjustedDailyAdSpend = baseDailyAdSpend * currentCrewCount;
+      }
+
+      const dailyAppointments = (adjustedDailyAdSpend / 36) * 0.5;
       const jobsDone = Math.min(dailyCapacity, dailyAppointments);
       const depositRevenue = jobsDone * depositPerJob;
       let finalPaymentRevenue = 0;
@@ -317,14 +280,14 @@ function MainCalculator() {
       }
       const variableRevenue =
         (depositRevenue + finalPaymentRevenue) * monthlyScore;
-      const adjustedAdSpend = dailyAdSpend * monthlyScore;
+      const adjustedAdSpend = adjustedDailyAdSpend * monthlyScore;
       let dailyProfit = variableRevenue - adjustedAdSpend - 20;
       if (day === 1) dailyProfit -= totalStartupCost;
       cumulative += dailyProfit;
       dayData.push({ x: day / 30, y: cumulative });
     }
 
-    // Break-Even Calculation
+    // Calculate Break-Even Point in weeks.
     let breakEvenDay = null;
     for (let i = 0; i < dayData.length; i++) {
       if (dayData[i].y >= 0) {
@@ -348,41 +311,29 @@ function MainCalculator() {
 
     monthlyMarkers = dayData.filter((_, idx) => (idx + 1) % 30 === 0);
 
-    let monthlyNetRevenueLast30 = 0;
-    if (dayData.length > 30) {
-      const finalCumulative = dayData[dayData.length - 1].y;
-      const startCumulative = dayData[dayData.length - 31].y;
-      monthlyNetRevenueLast30 = finalCumulative - startCumulative;
-    } else if (dayData.length > 0) {
-      monthlyNetRevenueLast30 = dayData[dayData.length - 1].y;
-    }
-    monthlyNetRevenueDisplay = monthlyNetRevenueLast30.toLocaleString(
-      undefined,
-      { maximumFractionDigits: 0 }
-    );
-
-    let yearlyNetRevenue = 0;
-    if (timeFrame >= 12) {
-      const dayIndex = 12 * 30 - 1;
-      yearlyNetRevenue =
-        dayIndex < dayData.length
-          ? dayData[dayIndex].y
-          : dayData[dayData.length - 1].y;
-    } else if (dayData.length > 0) {
-      const finalVal = dayData[dayData.length - 1].y;
-      yearlyNetRevenue = (finalVal / timeFrame) * 12;
-    }
-    yearlyNetRevenueDisplay = yearlyNetRevenue.toLocaleString(undefined, {
+    // Revenue Calculations:
+    // Base yearly revenue is the cumulative revenue of 12 months simulation.
+    const baseYearlyRevenue = dayData[simulationDays - 1].y;
+    // Apply projection multiplier if timeFrame > 12.
+    const adjustedYearlyRevenue = baseYearlyRevenue * projectionMultiplier;
+    yearlyNetRevenueDisplay = adjustedYearlyRevenue.toLocaleString(undefined, {
       maximumFractionDigits: 0,
     });
+    const adjustedMonthlyRevenue = adjustedYearlyRevenue / 12;
+    monthlyNetRevenueDisplay = adjustedMonthlyRevenue.toLocaleString(
+      undefined,
+      {
+        maximumFractionDigits: 0,
+      }
+    );
 
-    // Active Dot Logic: For the current crew (base crew if none added)
+    // Active Dot Logic: Based on the fixed simulation period.
     const lastCrewStart =
       crewAdditions.length > 0 ? Math.max(...crewAdditions) : 1;
     let cumulativeJobCount = 0;
     let activeDotDay = null;
     const thresholdJobs = aggressionSettings[aggressionLevel].thresholdJobs;
-    for (let day = lastCrewStart; day <= totalDays; day++) {
+    for (let day = lastCrewStart; day <= simulationDays; day++) {
       const currentCrewCount = Math.min(
         1 + crewAdditions.filter((d) => d <= day).length,
         4
@@ -392,8 +343,17 @@ function MainCalculator() {
       const monthlyScore = monthlyScoresRaw[monthIndex];
       const dailyCapacity =
         (currentCrewCount * aceConfig.baseJobsPerWeek * 4.3) / 30;
-      const dailyAdSpend = baseDailyAdSpend * currentCrewCount;
-      const dailyAppointments = (dailyAdSpend / 36) * 0.5;
+      let adjustedDailyAdSpendForDot = 0;
+      if (monthlyScore < 0.3) {
+        adjustedDailyAdSpendForDot = 0;
+      } else if (monthlyScore >= 0.3 && monthlyScore < 0.5) {
+        const scale = (monthlyScore - 0.3) / (0.5 - 0.3);
+        adjustedDailyAdSpendForDot =
+          baseDailyAdSpend * currentCrewCount * (scale * 0.5);
+      } else {
+        adjustedDailyAdSpendForDot = baseDailyAdSpend * currentCrewCount;
+      }
+      const dailyAppointments = (adjustedDailyAdSpendForDot / 36) * 0.5;
       const jobsDone = Math.min(dailyCapacity, dailyAppointments);
       cumulativeJobCount += jobsDone / currentCrewCount;
       if (!activeDotDay && cumulativeJobCount >= thresholdJobs) {
@@ -401,7 +361,7 @@ function MainCalculator() {
         break;
       }
     }
-    if (!activeDotDay) activeDotDay = totalDays;
+    if (!activeDotDay) activeDotDay = simulationDays;
     const dotX = activeDotDay / 30;
     const dotY = interpolateLine(dayData, dotX);
     activeDotDataset = {
@@ -412,11 +372,12 @@ function MainCalculator() {
       backgroundColor: aggressionSettings[aggressionLevel].dotColor,
       borderColor: '#0D47A1',
       borderWidth: 2,
-      order: 999, // Ensure dot is drawn on top
+      order: 999,
       z: 999,
     };
   }
 
+  // Chart datasets
   const lineDataset = {
     type: 'line',
     label: 'Cumulative Revenue ($)',
@@ -447,7 +408,7 @@ function MainCalculator() {
   if (activeDotDataset) datasets.push(activeDotDataset);
   const chartData = { datasets };
 
-  // Create a unique key for the Chart to force remounting when inputs change.
+  // Unique key for chart remounting when inputs change.
   const chartKey = `${selectedState}-${adSpendOption}-${timeFrame}-${aggressionLevel}-${crewAdditions.length}`;
 
   const chartOptions = {
@@ -479,8 +440,8 @@ function MainCalculator() {
           },
         },
       },
+      // Removed bracketLinePlugin from chart options.
       bookingTagPlugin: {},
-      bracketLinePlugin: {},
     },
     scales: {
       x: {
@@ -825,8 +786,8 @@ function MainCalculator() {
                   >
                     ${yearlyNetRevenueDisplay}
                   </Typography>
-                  <Typography variant='subtitle1' sx={{ fontWeight: 400 }}>
-                    Yearly Revenue
+                  <Typography variant='subtitle1' sx={{ fontWeight: 'bold' }}>
+                    Yearly Revenue – {projectionLabel}
                   </Typography>
                 </Box>
                 <Box>
@@ -839,8 +800,8 @@ function MainCalculator() {
                   >
                     ${monthlyNetRevenueDisplay}
                   </Typography>
-                  <Typography variant='subtitle1' sx={{ fontWeight: 400 }}>
-                    Monthly Revenue
+                  <Typography variant='subtitle1' sx={{ fontWeight: 'bold' }}>
+                    Average Monthly Revenue – {projectionLabel}
                   </Typography>
                 </Box>
               </Box>
@@ -1013,9 +974,7 @@ function MainCalculator() {
           <Box sx={{ mt: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
             <Typography variant='subtitle2' sx={{ fontStyle: 'italic' }}>
               <strong>Disclaimer:</strong> The results shown are estimates only
-              and do not guarantee future revenue. Ace Coatings is not liable
-              for any decisions made based on these projections. Actual results
-              may vary.
+              and do not guarantee future revenue. Actual results may vary.
             </Typography>
           </Box>
         </Paper>
@@ -1066,7 +1025,7 @@ function MainCalculator() {
           open={openEmailForm}
           onClose={() => setOpenEmailForm(false)}
           projectionsHtml={`
-            <h1>Your ROI Projections</h1>
+            <h1>Your ROI Projections - ${projectionLabel}</h1>
             <p><strong>State:</strong> ${selectedState}</p>
             <p><strong>Ad Spend:</strong> ${
               adSpendMapping[adSpendOption]?.label
@@ -1076,7 +1035,7 @@ function MainCalculator() {
             <p><strong>Aggression Level:</strong> ${aggressionLevel} (Final payment after ${
             aggressionSettings[aggressionLevel].payoutDelay
           } days)</p>
-            <p><strong>Monthly Revenue:</strong> $${monthlyNetRevenueDisplay}</p>
+            <p><strong>Average Monthly Revenue:</strong> $${monthlyNetRevenueDisplay}</p>
             <p><strong>Yearly Revenue:</strong> $${yearlyNetRevenueDisplay}</p>
             <p><strong>Break-Even:</strong> ${breakEvenDisplay}</p>
             <p><strong>Net Revenue per Job:</strong> $${netRevenuePerJob.toFixed(
@@ -1085,9 +1044,6 @@ function MainCalculator() {
             <p><strong>Gross Revenue per Job:</strong> $${grossRevenuePerJob.toFixed(
               2
             )}</p>
-            <p><strong>Daily Ad Spend Setting:</strong> $${
-              adSpendMapping[adSpendOption]?.daily
-            } per crew</p>
             <p><strong>Total Workable Weeks:</strong> ${
               selectedState
                 ? stateWorkabilityData[selectedState].total_workable_weeks
