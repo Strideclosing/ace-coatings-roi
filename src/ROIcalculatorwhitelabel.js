@@ -752,7 +752,7 @@ function MainCalculator() {
                   variant='contained'
                   fullWidth
                   sx={{
-                    backgroundColor: '#FF6B00',
+                    backgroundColor: '#FF5020',
                     '&:hover': { backgroundColor: '#E65C00' },
                     fontSize: '1.2rem',
                     fontWeight: 'bold',
