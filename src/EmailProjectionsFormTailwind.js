@@ -1,4 +1,6 @@
 // EmailProjectionsFormTailwind.js
+// :contentReference[oaicite:1]{index=1}
+
 import React, { useState } from 'react';
 
 export default function EmailProjectionsFormTailwind({
@@ -7,13 +9,11 @@ export default function EmailProjectionsFormTailwind({
   projectionsHtml,
   onSuccess,
 }) {
-  // Always call hooks at the top
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [bookAppointment, setBookAppointment] = useState(false);
 
-  // Then conditionally render based on the "open" prop
   if (!open) return null;
 
   const handleSubmit = async () => {
@@ -21,7 +21,6 @@ export default function EmailProjectionsFormTailwind({
       alert('Please enter your email.');
       return;
     }
-
     const payload = {
       name,
       email,
@@ -31,12 +30,15 @@ export default function EmailProjectionsFormTailwind({
     };
 
     try {
-      // Replace with your Make.com webhook URL (or GHL endpoint)
-      const res = await fetch('https://hook.us2.make.com/0njwmi8q4ki296pupsveg4bpv24a8u6q', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      // Replace with your actual Make.com webhook URL.
+      const res = await fetch(
+        'https://hook.us2.make.com/0njwmi8q4ki296pupsveg4bpv24a8u6q',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      );
       const data = await res.json();
       if (data.success) {
         onSuccess(bookAppointment);

@@ -1,4 +1,5 @@
-// AceCoatingsROICalculator.js
+// ROIcalculatorwhitelabel.js
+// :contentReference[oaicite:0]{index=0}
 
 import React, { useState } from 'react';
 import {
@@ -119,22 +120,18 @@ const pulseKeyframes = `
 const GlobalStyles = () => <style>{pulseKeyframes}</style>;
 
 // ------------------ Chart Plugins ------------------
-
-// Remove the bracketLinePlugin visual drawing for green brackets.
-// We still keep the underlying logic (if any) in your simulation calculations,
-// but visually, we are no longer drawing the bracket.
-
-// Booking Tag Plugin: Draws the active dot label.
+// Removed bracketLinePlugin (green bracket visual) as requested.
+// Retain active dot logic for now.
 const bookingTagPlugin = {
   id: 'bookingTagPlugin',
   afterDatasetsDraw(chart) {
-    const {
-      ctx,
-      scales: { x: xScale, y: yScale },
-    } = chart;
     chart.data.datasets.forEach((ds) => {
       if (ds.label === 'Active Crew Dot') {
         ds.data.forEach((point) => {
+          const {
+            ctx,
+            scales: { x: xScale, y: yScale },
+          } = chart;
           const xPixel = xScale.getPixelForValue(point.x);
           const yPixel = yScale.getPixelForValue(point.y);
           ctx.save();
@@ -172,7 +169,6 @@ ChartJS.register(
   Legend,
   Filler,
   bookingTagPlugin
-  // Note: bracketLinePlugin removed from registration.
 );
 
 // ------------------ Main Component ------------------
@@ -187,8 +183,6 @@ export default function AceCoatingsROICalculator() {
 
 function MainCalculator() {
   const localTheme = theme;
-
-  // State for user inputs
   const [selectedState, setSelectedState] = useState('');
   const [adSpendOption, setAdSpendOption] = useState('PlayItSafe');
   const [timeFrame, setTimeFrame] = useState(6);
@@ -214,8 +208,7 @@ function MainCalculator() {
   ];
   const currentMonthIndex = new Date().getMonth();
 
-  // Determine projection multiplier and label based on timeFrame.
-  // Simulation always based on 12 months.
+  // Projection multiplier & label (always based on 12-month simulation)
   let projectionMultiplier = 1;
   let projectionLabel = '1 Year Projection';
   if (timeFrame > 12 && timeFrame <= 24) {
@@ -226,10 +219,9 @@ function MainCalculator() {
     projectionLabel = '3 Year Projection';
   }
 
-  // Always simulate a fixed 12-month period (360 days).
+  // Fixed simulation period: 12 months (360 days)
   const simulationDays = 12 * 30;
 
-  // Simulation & Dot Logic – run simulation if state is selected
   let dayData = [];
   let monthlyNetRevenueDisplay = '0';
   let yearlyNetRevenueDisplay = '0';
@@ -243,10 +235,8 @@ function MainCalculator() {
     const monthlyScoresRaw = stateData.monthly_scores;
     totalWorkableWeeks = stateData.total_workable_weeks;
     const baseDailyAdSpend = adSpendMapping[adSpendOption]?.daily || 0;
-
     let cumulative = 0;
     dayData = [];
-    // Run simulation for a full 12 months irrespective of user-selected timeFrame.
     for (let day = 1; day <= simulationDays; day++) {
       const currentCrewCount = Math.min(
         1 + crewAdditions.filter((d) => d <= day).length,
@@ -255,11 +245,8 @@ function MainCalculator() {
       const rawMonthIndex = Math.floor((day - 1) / 30);
       const monthIndex = (currentMonthIndex + rawMonthIndex) % 12;
       const monthlyScore = monthlyScoresRaw[monthIndex];
-
       const dailyCapacity =
         (currentCrewCount * aceConfig.baseJobsPerWeek * 4.3) / 30;
-
-      // Ad Spend Adjustment: apply thresholds.
       let adjustedDailyAdSpend = 0;
       if (monthlyScore < 0.3) {
         adjustedDailyAdSpend = 0;
@@ -270,7 +257,6 @@ function MainCalculator() {
       } else {
         adjustedDailyAdSpend = baseDailyAdSpend * currentCrewCount;
       }
-
       const dailyAppointments = (adjustedDailyAdSpend / 36) * 0.5;
       const jobsDone = Math.min(dailyCapacity, dailyAppointments);
       const depositRevenue = jobsDone * depositPerJob;
@@ -286,8 +272,6 @@ function MainCalculator() {
       cumulative += dailyProfit;
       dayData.push({ x: day / 30, y: cumulative });
     }
-
-    // Calculate Break-Even Point in weeks.
     let breakEvenDay = null;
     for (let i = 0; i < dayData.length; i++) {
       if (dayData[i].y >= 0) {
@@ -308,13 +292,8 @@ function MainCalculator() {
       const breakEvenWeeks = exactBreakEvenDay / 7;
       breakEvenDisplay = `${roundToNearestHalf(breakEvenWeeks)} weeks`;
     }
-
     monthlyMarkers = dayData.filter((_, idx) => (idx + 1) % 30 === 0);
-
-    // Revenue Calculations:
-    // Base yearly revenue is the cumulative revenue of 12 months simulation.
     const baseYearlyRevenue = dayData[simulationDays - 1].y;
-    // Apply projection multiplier if timeFrame > 12.
     const adjustedYearlyRevenue = baseYearlyRevenue * projectionMultiplier;
     yearlyNetRevenueDisplay = adjustedYearlyRevenue.toLocaleString(undefined, {
       maximumFractionDigits: 0,
@@ -322,12 +301,10 @@ function MainCalculator() {
     const adjustedMonthlyRevenue = adjustedYearlyRevenue / 12;
     monthlyNetRevenueDisplay = adjustedMonthlyRevenue.toLocaleString(
       undefined,
-      {
-        maximumFractionDigits: 0,
-      }
+      { maximumFractionDigits: 0 }
     );
 
-    // Active Dot Logic: Based on the fixed simulation period.
+    // Active dot logic remains as is.
     const lastCrewStart =
       crewAdditions.length > 0 ? Math.max(...crewAdditions) : 1;
     let cumulativeJobCount = 0;
@@ -377,7 +354,6 @@ function MainCalculator() {
     };
   }
 
-  // Chart datasets
   const lineDataset = {
     type: 'line',
     label: 'Cumulative Revenue ($)',
@@ -408,14 +384,10 @@ function MainCalculator() {
   if (activeDotDataset) datasets.push(activeDotDataset);
   const chartData = { datasets };
 
-  // Unique key for chart remounting when inputs change.
   const chartKey = `${selectedState}-${adSpendOption}-${timeFrame}-${aggressionLevel}-${crewAdditions.length}`;
 
   const chartOptions = {
-    animation: {
-      duration: 1000,
-      easing: 'easeOutCubic',
-    },
+    animation: { duration: 1000, easing: 'easeOutCubic' },
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -440,7 +412,6 @@ function MainCalculator() {
           },
         },
       },
-      // Removed bracketLinePlugin from chart options.
       bookingTagPlugin: {},
     },
     scales: {
@@ -508,6 +479,37 @@ function MainCalculator() {
       setTimeout(() => setToastMessage(''), 3000);
     }
   }
+
+  // Clean, inline-styled HTML for email projections output.
+  const projectionsHtml = `
+<div style="font-family: Arial, sans-serif; color: #333; line-height: 1.5; margin: 0; padding: 0;">
+  <h1 style="font-size: 22px; margin: 0 0 10px;">Your ROI Projections - ${projectionLabel}</h1>
+  <p style="margin: 0;"><strong>State:</strong> ${selectedState || 'N/A'}</p>
+  <p style="margin: 0;"><strong>Ad Spend:</strong> ${
+    adSpendMapping[adSpendOption]?.label || 'N/A'
+  }</p>
+  <p style="margin: 0;"><strong>Time Frame:</strong> ${timeFrame} months</p>
+  <p style="margin: 0;"><strong>Crew Count:</strong> ${
+    1 + crewAdditions.length
+  }</p>
+  <p style="margin: 0;"><strong>Aggression Level:</strong> ${aggressionLevel} (Final payment after ${
+    aggressionSettings[aggressionLevel].payoutDelay
+  } days)</p>
+  <p style="margin: 0;"><strong>Average Monthly Revenue:</strong> $${monthlyNetRevenueDisplay}</p>
+  <p style="margin: 0;"><strong>Yearly Revenue:</strong> $${yearlyNetRevenueDisplay}</p>
+  <p style="margin: 0;"><strong>Break-Even:</strong> ${breakEvenDisplay}</p>
+  <p style="margin: 0;"><strong>Net Revenue per Job:</strong> $${netRevenuePerJob.toFixed(
+    2
+  )}</p>
+  <p style="margin: 0;"><strong>Gross Revenue per Job:</strong> $${grossRevenuePerJob.toFixed(
+    2
+  )}</p>
+  <p style="margin: 0;"><strong>Total Workable Weeks:</strong> ${
+    selectedState ? stateWorkabilityData[selectedState].total_workable_weeks : 0
+  } weeks</p>
+  <p style="margin: 10px 0 0; font-size: 12px; color: #777;"><strong>Disclaimer:</strong> The results shown are estimates only and do not guarantee future revenue. Actual results may vary.</p>
+</div>
+`.trim();
 
   return (
     <ThemeProvider theme={localTheme}>
@@ -1024,33 +1026,36 @@ function MainCalculator() {
         <EmailProjectionsFormTailwind
           open={openEmailForm}
           onClose={() => setOpenEmailForm(false)}
+          // Clean, inline-styled HTML output for email:
           projectionsHtml={`
-            <h1>Your ROI Projections - ${projectionLabel}</h1>
-            <p><strong>State:</strong> ${selectedState}</p>
-            <p><strong>Ad Spend:</strong> ${
-              adSpendMapping[adSpendOption]?.label
-            }</p>
-            <p><strong>Time Frame:</strong> ${timeFrame} months</p>
-            <p><strong>Crew Count:</strong> ${1 + crewAdditions.length}</p>
-            <p><strong>Aggression Level:</strong> ${aggressionLevel} (Final payment after ${
+<div style="font-family: Arial, sans-serif; color: #333; line-height: 1.5; margin: 0; padding: 0;">
+  <h1 style="font-size: 22px; margin: 0 0 10px;">Your ROI Projections - ${projectionLabel}</h1>
+  <p style="margin: 0;"><strong>State:</strong> ${selectedState || 'N/A'}</p>
+  <p style="margin: 0;"><strong>Ad Spend:</strong> ${
+    adSpendMapping[adSpendOption]?.label || 'N/A'
+  }</p>
+  <p style="margin: 0;"><strong>Time Frame:</strong> ${timeFrame} months</p>
+  <p style="margin: 0;"><strong>Crew Count:</strong> ${
+    1 + crewAdditions.length
+  }</p>
+  <p style="margin: 0;"><strong>Aggression Level:</strong> ${aggressionLevel} (Final payment after ${
             aggressionSettings[aggressionLevel].payoutDelay
           } days)</p>
-            <p><strong>Average Monthly Revenue:</strong> $${monthlyNetRevenueDisplay}</p>
-            <p><strong>Yearly Revenue:</strong> $${yearlyNetRevenueDisplay}</p>
-            <p><strong>Break-Even:</strong> ${breakEvenDisplay}</p>
-            <p><strong>Net Revenue per Job:</strong> $${netRevenuePerJob.toFixed(
-              2
-            )}</p>
-            <p><strong>Gross Revenue per Job:</strong> $${grossRevenuePerJob.toFixed(
-              2
-            )}</p>
-            <p><strong>Total Workable Weeks:</strong> ${
-              selectedState
-                ? stateWorkabilityData[selectedState].total_workable_weeks
-                : 0
-            } weeks</p>
-            <p><strong>Disclaimer:</strong> The results shown are estimates only and do not guarantee future revenue. Actual results may vary.</p>
-          `}
+  <p style="margin: 0;"><strong>Average Monthly Revenue:</strong> $${monthlyNetRevenueDisplay}</p>
+  <p style="margin: 0;"><strong>Yearly Revenue:</strong> $${yearlyNetRevenueDisplay}</p>
+  <p style="margin: 0;"><strong>Break-Even:</strong> ${breakEvenDisplay}</p>
+  <p style="margin: 0;"><strong>Net Revenue per Job:</strong> $${netRevenuePerJob.toFixed(
+    2
+  )}</p>
+  <p style="margin: 0;"><strong>Gross Revenue per Job:</strong> $${grossRevenuePerJob.toFixed(
+    2
+  )}</p>
+  <p style="margin: 0;"><strong>Total Workable Weeks:</strong> ${
+    selectedState ? stateWorkabilityData[selectedState].total_workable_weeks : 0
+  } weeks</p>
+  <p style="margin: 10px 0 0; font-size: 12px; color: #777;"><strong>Disclaimer:</strong> The results shown are estimates only and do not guarantee future revenue. Actual results may vary.</p>
+</div>
+          `.trim()}
           onSuccess={(bookAppointment) => {
             if (bookAppointment) {
               window.location.href =
