@@ -1,6 +1,4 @@
 // EmailProjectionsFormTailwind.js
-// :contentReference[oaicite:1]{index=1}
-
 import React, { useState } from 'react';
 
 export default function EmailProjectionsFormTailwind({
@@ -35,7 +33,11 @@ export default function EmailProjectionsFormTailwind({
         'https://hook.us2.make.com/0njwmi8q4ki296pupsveg4bpv24a8u6q',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            // Include the API key header required for security.
+            "x-api-key": process.env.NEXT_PUBLIC_PDF_API_KEY
+          },
           body: JSON.stringify(payload),
         }
       );

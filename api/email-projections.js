@@ -1,17 +1,15 @@
 export default async function handler(req, res) {
   // Only allow POST requests.
-  if (
-    (req.headers['825b9547-557c-437d-914e-28c5593179f8'] || '').trim() !==
-    (process.env.PDF_API_KEY || '').trim()
-  ) {
-    return res.status(403).json({ success: false, error: 'Unauthorized' });
+  if (req.method !== 'POST') {
+    return res
+      .status(405)
+      .json({ success: false, error: 'Method Not Allowed' });
   }
 
   // Security check: Only proceed if the x-api-key header matches the secret key.
-  // Ensure that PDF_API_KEY is set in your Vercel environment variables.
   if (
-    req.headers['825b9547-557c-437d-914e-28c5593179f8'] !==
-    process.env.PDF_API_KEY
+    (req.headers['x-api-key'] || '').trim() !==
+    (process.env.PDF_API_KEY || '').trim()
   ) {
     return res.status(403).json({ success: false, error: 'Unauthorized' });
   }
